@@ -1,0 +1,5 @@
+nodeSelector:
+  karpenter.k8s.aws/instance-gpu-manufacturer: nvidia
+
+tolerations:
+  - operator: Exists

@@ -1,0 +1,57 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: spark-gpu
+spec:
+  weight: 25
+
+  template:
+    metadata:
+      labels:
+        workload: spark-gpu
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: spark-gpu
+
+      taints:
+        - key: workload
+          value: spark-gpu
+          effect: NoSchedule
+        - key: nvidia.com/gpu
+          value: "true"
+          effect: NoSchedule
+
+      expireAfter: 2h
+
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["g"]
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["4"]
+        - key: karpenter.k8s.aws/instance-gpu-manufacturer
+          operator: In
+          values: ["nvidia"]
+        - key: karpenter.k8s.aws/instance-gpu-count
+          operator: In
+          values: ["1"]
+
+  limits:
+    cpu: "96"
+    nvidia.com/gpu: "8"
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m

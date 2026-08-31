@@ -1,0 +1,17 @@
+settings:
+  clusterName: kube-system-experiment-eks
+  interruptionQueue: kube-system-experiment-karpenter
+
+serviceAccount:
+  name: karpenter
+
+nodeSelector:
+  role: system
+
+controller:
+  resources:
+    requests:
+      cpu: 1
+      memory: 1Gi
+    limits:
+      memory: 1Gi

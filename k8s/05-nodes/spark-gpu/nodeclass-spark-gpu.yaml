@@ -1,0 +1,32 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-gpu
+spec:
+  role: kube-system-experiment-karpenter-node
+
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - name: "amazon-eks-node-al2023-x86_64-nvidia-1.34-*"
+      owner: "amazon"
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: kube-system-experiment-eks
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: kube-system-experiment-eks
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+
+  tags:
+    Project: kube-system-experiment
+    ManagedBy: karpenter
+    Workload: spark-gpu

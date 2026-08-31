@@ -1,0 +1,51 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: kafka-streams
+spec:
+  weight: 60
+
+  template:
+    metadata:
+      labels:
+        workload: kafka-streams
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: kafka-streams
+
+      taints:
+        - key: workload
+          value: kafka-streams
+          effect: NoSchedule
+
+      expireAfter: 2h
+      terminationGracePeriod: 30m
+
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["m", "r"]
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["4"]
+        - key: karpenter.k8s.aws/instance-cpu
+          operator: Gt
+          values: ["3"]
+
+  limits:
+    cpu: "64"
+
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 10m

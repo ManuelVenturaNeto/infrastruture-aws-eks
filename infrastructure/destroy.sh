@@ -3,7 +3,7 @@ set -euo pipefail
 
 CLUSTER_NAME="kube-system-experiment-eks"
 REGION="us-east-1"
-TF_DIR="$(cd "$(dirname "$0")" && pwd)/01-cluster"
+TF_DIR="$(cd "$(dirname "$0")" && pwd)/cluster"
 TIMEOUT_DRENAGEM=3600
 
 titulo() {

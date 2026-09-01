@@ -1,0 +1,23 @@
+{
+  "name": "Estudos",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
+    }
+  },
+  "forwardPorts": [4040, 8888],
+  "remoteEnv": {
+    "MLFLOW_TRACKING_URI": "http://host.docker.internal:5000"
+  },
+  "runArgs": ["--add-host=host.docker.internal:host-gateway"],
+  "remoteUser": "root"
+}

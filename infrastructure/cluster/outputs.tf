@@ -32,3 +32,18 @@ output "region" {
   description = "Regiao AWS do stack."
   value       = var.region
 }
+
+output "ecr_registry" {
+  description = "Host do registry ECR, usado no docker login e no build das imagens."
+  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
+}
+
+output "ecr_repository_urls" {
+  description = "URL de cada repositorio ECR criado."
+  value       = { for name, repo in aws_ecr_repository.images : name => repo.repository_url }
+}
+
+output "bastion_instance_id" {
+  description = "Instancia usada pelo tunnel.sh para alcancar a API privada do EKS."
+  value       = aws_instance.bastion.id
+}

@@ -332,5 +332,5 @@ terraform.rc
 
 # End of https://www.toptal.com/developers/gitignore/api/python,terraform,go,spark
 
-**/STUDY.md
+STUDY-*.md
 process/src/datasets/*

@@ -1,27 +1,26 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: kafka-streams
+  name: spark
 spec:
-  weight: 60
+  weight: 50
 
   template:
     metadata:
       labels:
-        workload: kafka-streams
+        workload: spark
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: kafka-streams
+        name: spark
 
       taints:
         - key: workload
-          value: kafka-streams
+          value: spark
           effect: NoSchedule
 
-      expireAfter: 2h
-      terminationGracePeriod: 30m
+      expireAfter: 15m
 
       requirements:
         - key: kubernetes.io/arch
@@ -32,10 +31,10 @@ spec:
           values: ["linux"]
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["on-demand"]
+          values: ["spot", "on-demand"]
         - key: karpenter.k8s.aws/instance-category
           operator: In
-          values: ["m", "r"]
+          values: ["c", "m", "r"]
         - key: karpenter.k8s.aws/instance-generation
           operator: Gt
           values: ["4"]
@@ -44,8 +43,8 @@ spec:
           values: ["3"]
 
   limits:
-    cpu: "64"
+    cpu: "200"
 
   disruption:
     consolidationPolicy: WhenEmpty
-    consolidateAfter: 10m
+    consolidateAfter: 1m

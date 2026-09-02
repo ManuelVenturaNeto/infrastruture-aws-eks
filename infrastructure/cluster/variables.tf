@@ -27,3 +27,21 @@ variable "system_instance_types" {
   type        = list(string)
   default     = ["t3.medium"]
 }
+
+variable "image_repositories" {
+  description = "Repositorios ECR criados para as imagens de workload."
+  type        = list(string)
+  default     = ["spark"]
+}
+
+variable "bastion_instance_type" {
+  description = "Tipo da EC2 do bastion de acesso via SSM."
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "bastion_proxy_port" {
+  description = "Porta do proxy CONNECT dentro do bastion."
+  type        = number
+  default     = 3128
+}

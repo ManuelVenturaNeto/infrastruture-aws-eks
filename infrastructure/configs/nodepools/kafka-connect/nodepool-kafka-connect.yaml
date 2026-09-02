@@ -1,29 +1,26 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: spark-gpu
+  name: kafka-connect
 spec:
-  weight: 25
+  weight: 40
 
   template:
     metadata:
       labels:
-        workload: spark-gpu
+        workload: kafka-connect
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: spark-gpu
+        name: kafka-connect
 
       taints:
         - key: workload
-          value: spark-gpu
-          effect: NoSchedule
-        - key: nvidia.com/gpu
-          value: "true"
+          value: kafka-connect
           effect: NoSchedule
 
-      expireAfter: 2h
+      expireAfter: 15m
 
       requirements:
         - key: kubernetes.io/arch
@@ -37,20 +34,16 @@ spec:
           values: ["spot", "on-demand"]
         - key: karpenter.k8s.aws/instance-category
           operator: In
-          values: ["g"]
+          values: ["c", "m", "r"]
         - key: karpenter.k8s.aws/instance-generation
           operator: Gt
           values: ["4"]
-        - key: karpenter.k8s.aws/instance-gpu-manufacturer
-          operator: In
-          values: ["nvidia"]
-        - key: karpenter.k8s.aws/instance-gpu-count
-          operator: In
-          values: ["1"]
+        - key: karpenter.k8s.aws/instance-cpu
+          operator: Gt
+          values: ["3"]
 
   limits:
-    cpu: "96"
-    nvidia.com/gpu: "8"
+    cpu: "64"
 
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized

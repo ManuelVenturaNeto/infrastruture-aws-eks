@@ -1,26 +1,27 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: kafka-connect
+  name: kafka
 spec:
-  weight: 40
+  weight: 100
 
   template:
     metadata:
       labels:
-        workload: kafka-connect
+        workload: kafka
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: kafka-connect
+        name: kafka
 
       taints:
         - key: workload
-          value: kafka-connect
+          value: kafka
           effect: NoSchedule
 
-      expireAfter: 2h
+      expireAfter: Never
+      terminationGracePeriod: 15m
 
       requirements:
         - key: kubernetes.io/arch
@@ -31,20 +32,20 @@ spec:
           values: ["linux"]
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["spot", "on-demand"]
+          values: ["on-demand"]
         - key: karpenter.k8s.aws/instance-category
           operator: In
-          values: ["c", "m", "r"]
+          values: ["m", "r"]
         - key: karpenter.k8s.aws/instance-generation
           operator: Gt
-          values: ["4"]
+          values: ["5"]
         - key: karpenter.k8s.aws/instance-cpu
-          operator: Gt
-          values: ["3"]
+          operator: In
+          values: ["4", "8"]
 
   limits:
-    cpu: "64"
+    cpu: "48"
 
   disruption:
-    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidationPolicy: WhenEmpty
     consolidateAfter: 5m

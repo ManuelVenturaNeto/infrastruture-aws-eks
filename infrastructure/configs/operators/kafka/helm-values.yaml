@@ -1,0 +1,16 @@
+replicas: 1
+
+watchAnyNamespace: false
+
+nodeSelector:
+  role: system
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    memory: 512Mi
+
+leaderElection:
+  enable: true

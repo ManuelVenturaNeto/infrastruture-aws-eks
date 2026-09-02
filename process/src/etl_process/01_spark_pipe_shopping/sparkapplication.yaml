@@ -1,0 +1,64 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: shopping-etl
+  namespace: spark-jobs
+spec:
+  type: Python
+  mode: cluster
+  image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system-experiment/spark:1.0.0
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/jobs/etl_process/01_spark_pipe_shopping/main.py
+  arguments:
+    - "--input"
+    - "file:///opt/spark/datasets/shopping"
+    - "--rows"
+    - "20"
+  sparkVersion: 4.2.0
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 2
+    onFailureRetryInterval: 20
+    onSubmissionFailureRetries: 3
+    onSubmissionFailureRetryInterval: 30
+
+  sparkConf:
+    "spark.decommission.enabled": "true"
+    "spark.storage.decommission.enabled": "true"
+    "spark.storage.decommission.shuffleBlocks.enabled": "true"
+    "spark.storage.decommission.rddBlocks.enabled": "true"
+    "spark.dynamicAllocation.shuffleTracking.enabled": "true"
+
+  dynamicAllocation:
+    enabled: true
+    initialExecutors: 2
+    minExecutors: 2
+    maxExecutors: 10
+
+  driver:
+    cores: 1
+    memory: 2g
+    serviceAccount: spark
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    nodeSelector:
+      workload: spark
+      karpenter.sh/capacity-type: on-demand
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark
+        effect: NoSchedule
+
+  executor:
+    cores: 2
+    memory: 4g
+    nodeSelector:
+      workload: spark
+      karpenter.sh/capacity-type: spot
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark
+        effect: NoSchedule

@@ -1,0 +1,53 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: shopping-xgboost
+  namespace: spark-jobs
+spec:
+  type: Python
+  mode: cluster
+  image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system-experiment/xgboost:1.0.0
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/jobs/ml_process/01_xgboost/train.py
+  arguments:
+    - "--input"
+    - "file:///opt/spark/datasets/shopping"
+    - "--device"
+    - "cpu"
+    - "--workers"
+    - "2"
+  sparkVersion: 4.2.0
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 2
+    onFailureRetryInterval: 20
+    onSubmissionFailureRetries: 3
+    onSubmissionFailureRetryInterval: 30
+
+  driver:
+    cores: 1
+    memory: 2g
+    serviceAccount: spark
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    nodeSelector:
+      workload: spark
+      karpenter.sh/capacity-type: on-demand
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark
+        effect: NoSchedule
+
+  executor:
+    instances: 2
+    cores: 2
+    memory: 6g
+    nodeSelector:
+      workload: spark
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark
+        effect: NoSchedule

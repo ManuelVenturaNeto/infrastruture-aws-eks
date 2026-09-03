@@ -63,6 +63,9 @@ Passar `spark-gpu` instala junto o device plugin da NVIDIA, que é dependência 
 **Nenhuma máquina de workload sobe aqui.** O Karpenter só cria EC2 quando existir
 pod `Pending` que precise dela.
 
+O node group `system` é *tainted* com `CriticalAddonsOnly=true:NoSchedule`. Pod sem
+`nodeSelector`/`tolerations` fica `Pending` de propósito, em vez de ocupar as `t3.medium`.
+
 ## Derrubar
 
 ```bash
@@ -119,6 +122,6 @@ infrastructure/
     gpu/              device plugin da NVIDIA
     operators/
       spark/          Spark Operator + namespaces spark-operator e spark-jobs
-      kafka/          Strimzi + namespace kafka
+      kafka/          Strimzi + namespaces kafka, kafka-connect e kafka-streams
     nodepools/        spark, spark-gpu, kafka, kafka-connect, kafka-streams
 ```

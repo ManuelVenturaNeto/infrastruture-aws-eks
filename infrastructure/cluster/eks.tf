@@ -35,6 +35,14 @@ module "eks" {
       labels = {
         role = "system"
       }
+
+      taints = {
+        addons = {
+          key    = "CriticalAddonsOnly"
+          value  = "true"
+          effect = "NO_SCHEDULE"
+        }
+      }
     }
   }
 
@@ -60,6 +68,10 @@ module "eks" {
     "coredns" = {
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
+
+      configuration_values = jsonencode({
+        tolerations = local.system_taint_tolerations
+      })
     }
 
     "eks-pod-identity-agent" = {
@@ -72,6 +84,12 @@ module "eks" {
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
 
+      configuration_values = jsonencode({
+        controller = {
+          tolerations = local.system_taint_tolerations
+        }
+      })
+
       pod_identity_association = [{
         role_arn        = module.ebs_csi_pod_identity.iam_role_arn
         service_account = "ebs-csi-controller-sa"
@@ -81,11 +99,19 @@ module "eks" {
     "metrics-server" = {
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
+
+      configuration_values = jsonencode({
+        tolerations = local.system_taint_tolerations
+      })
     }
 
     "snapshot-controller" = {
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
+
+      configuration_values = jsonencode({
+        tolerations = local.system_taint_tolerations
+      })
     }
   }
 

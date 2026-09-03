@@ -1,0 +1,66 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: shopping-xgboost-gpu
+  namespace: spark-jobs
+spec:
+  type: Python
+  mode: cluster
+  image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system-experiment/xgboost-gpu:1.0.0
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/jobs/ml_process/01_xgboost/train.py
+  arguments:
+    - "--input"
+    - "file:///opt/spark/datasets/shopping"
+    - "--device"
+    - "cuda"
+    - "--workers"
+    - "2"
+  sparkVersion: 4.2.0
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 2
+    onFailureRetryInterval: 20
+    onSubmissionFailureRetries: 3
+    onSubmissionFailureRetryInterval: 30
+
+  sparkConf:
+    "spark.executor.resource.gpu.amount": "1"
+    "spark.executor.resource.gpu.vendor": "nvidia.com"
+    "spark.executor.resource.gpu.discoveryScript": "/opt/spark/examples/src/main/scripts/getGpusResources.sh"
+    "spark.task.resource.gpu.amount": "1"
+
+  driver:
+    cores: 1
+    memory: 2g
+    serviceAccount: spark
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    nodeSelector:
+      workload: spark
+      karpenter.sh/capacity-type: on-demand
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark
+        effect: NoSchedule
+
+  executor:
+    instances: 2
+    cores: 2
+    memory: 6g
+    gpu:
+      name: nvidia.com/gpu
+      quantity: 1
+    nodeSelector:
+      workload: spark-gpu
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark-gpu
+        effect: NoSchedule
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule

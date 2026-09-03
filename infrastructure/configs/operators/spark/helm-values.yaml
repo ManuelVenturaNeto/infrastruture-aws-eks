@@ -1,8 +1,22 @@
+hook:
+  upgradeCrd: true
+
+  nodeSelector:
+    role: system
+
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+
 controller:
   replicas: 1
 
   nodeSelector:
     role: system
+
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
 
   resources:
     requests:
@@ -17,6 +31,10 @@ webhook:
 
   nodeSelector:
     role: system
+
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
 
   resources:
     requests:
@@ -35,7 +53,3 @@ spark:
 
   rbac:
     create: true
-
-prometheus:
-  metrics:
-    enable: true

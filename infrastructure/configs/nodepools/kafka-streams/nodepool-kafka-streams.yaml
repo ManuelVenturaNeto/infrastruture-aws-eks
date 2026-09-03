@@ -20,8 +20,8 @@ spec:
           value: kafka-streams
           effect: NoSchedule
 
-      expireAfter: 30m
-      terminationGracePeriod: 15m
+      expireAfter: 24h
+      terminationGracePeriod: 30m
 
       requirements:
         - key: kubernetes.io/arch
@@ -33,15 +33,13 @@ spec:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["on-demand"]
-        - key: karpenter.k8s.aws/instance-category
+        - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["m", "r"]
-        - key: karpenter.k8s.aws/instance-generation
-          operator: Gt
-          values: ["4"]
+          values: ["m6i", "m6a", "m7i", "r6i", "r7i"]
+          minValues: 3
         - key: karpenter.k8s.aws/instance-cpu
-          operator: Gt
-          values: ["3"]
+          operator: In
+          values: ["4", "8", "16"]
 
   limits:
     cpu: "64"

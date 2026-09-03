@@ -2,3 +2,13 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: kafka
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-connect
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-streams

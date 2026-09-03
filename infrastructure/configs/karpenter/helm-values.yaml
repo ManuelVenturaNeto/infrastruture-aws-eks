@@ -8,10 +8,14 @@ serviceAccount:
 nodeSelector:
   role: system
 
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
+
 controller:
   resources:
     requests:
-      cpu: 1
+      cpu: 500m
       memory: 1Gi
     limits:
       memory: 1Gi

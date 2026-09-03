@@ -1,9 +1,15 @@
 replicas: 1
 
 watchAnyNamespace: false
+watchNamespaces:
+  - kafka-connect
 
 nodeSelector:
   role: system
+
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
 
 resources:
   requests:

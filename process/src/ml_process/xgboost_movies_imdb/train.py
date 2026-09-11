@@ -52,11 +52,15 @@ def main() -> None:
     try:
         data = prepare(spark, args.input)
         train_set, test_set = data.randomSplit([0.8, 0.2], seed=42)
-        print(f"device={args.device} workers={args.workers} train={train_set.count()} test={test_set.count()}")
+        print(
+            f"device={args.device} workers={args.workers} train={train_set.count()} test={test_set.count()}"
+        )
 
         model = train(train_set, args.device, args.workers, args.rounds)
 
-        evaluator = RegressionEvaluator(labelCol=LABEL, predictionCol="prediction", metricName="rmse")
+        evaluator = RegressionEvaluator(
+            labelCol=LABEL, predictionCol="prediction", metricName="rmse"
+        )
         rmse = evaluator.evaluate(model.transform(test_set))
         print(f"rmse={rmse:.4f}")
     finally:

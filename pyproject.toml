@@ -1,5 +1,5 @@
 [project]
-name = "process"
+name = "process-infra"
 version = "0.1.0"
 description = "Geracao de datasets e treino de modelos para o pipeline Spark no EKS."
 readme = "README.md"
@@ -8,10 +8,18 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "dask-ml>=2025.1.0",
+    "delta-spark>=4.4.0",
+    "keras>=3.15.1",
+    "nbstripout>=0.9.1",
     "pandas>=3.0.5",
+    "pre-commit>=4.6.2",
     "pyarrow>=25.0.1",
     "pyspark>=4.2.0",
+    "ruff>=0.16.7",
     "scikit-learn>=1.9.0",
+    "tensorflow>=2.21.0",
+    "torch>=2.14.0",
     "xgboost>=3.4.1",
 ]
 

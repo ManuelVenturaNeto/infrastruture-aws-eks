@@ -10,9 +10,11 @@ import pyarrow.parquet as pq
 OPENML = "https://data.openml.org/datasets/0004"
 OLIST = "https://huggingface.co/api/datasets/miminmoons/olist-ecommerce-for-delivery-and-review-prediction/parquet/default/train"
 FANNIE = "https://huggingface.co/api/datasets/yeigen/fannie-mae-loan-performance/parquet/default/train"
-HOTEIS = "https://huggingface.co/api/datasets/gemuchu/hotel_bookings/parquet/default/train"
-FILMES_IMDB = "https://datasets.imdbws.com"
-FILMES_AMAZON = "https://huggingface.co/api/datasets/rohan2810/amazon-movies-meta-reviews-merged/parquet/default/train"
+HOTELS = (
+    "https://huggingface.co/api/datasets/gemuchu/hotel_bookings/parquet/default/train"
+)
+MOVIES_IMDB = "https://datasets.imdbws.com"
+MOVIES_AMAZON = "https://huggingface.co/api/datasets/rohan2810/amazon-movies-meta-reviews-merged/parquet/default/train"
 
 IMDB_TABLES = (
     "title.basics",
@@ -25,14 +27,14 @@ IMDB_TABLES = (
 )
 
 DATASETS = {
-    "credito": [f"{OPENML}/46929/dataset_46929.pq"],
-    "seguros": [f"{OPENML}/42742/dataset_42742.pq"],
-    "cartao": [f"{OPENML}/42175/dataset_42175.pq"],
+    "credit": [f"{OPENML}/46929/dataset_46929.pq"],
+    "insurance": [f"{OPENML}/42742/dataset_42742.pq"],
+    "cards": [f"{OPENML}/42175/dataset_42175.pq"],
     "shopping": [f"{OLIST}/0.parquet"],
-    "imoveis": [f"{FANNIE}/{part}.parquet" for part in range(6765)],
-    "hoteis": [f"{HOTEIS}/0.parquet"],
-    "filmes_imdb": [f"{FILMES_IMDB}/{table}.tsv.gz" for table in IMDB_TABLES],
-    "filmes_amazon": [f"{FILMES_AMAZON}/{part}.parquet" for part in range(33)],
+    "real_estate": [f"{FANNIE}/{part}.parquet" for part in range(6765)],
+    "hotels": [f"{HOTELS}/0.parquet"],
+    "movies_imdb": [f"{MOVIES_IMDB}/{table}.tsv.gz" for table in IMDB_TABLES],
+    "movies_amazon": [f"{MOVIES_AMAZON}/{part}.parquet" for part in range(33)],
 }
 
 SUFFIXES = (".tsv.gz", ".parquet", ".pq")
@@ -51,7 +53,9 @@ def parquet_name(url: str) -> str:
 
 def open_tsv(archive: Path, convert_options: pyarrow.csv.ConvertOptions | None = None):
     stream = pa.input_stream(archive, compression="gzip")
-    return pyarrow.csv.open_csv(stream, parse_options=PARSE_OPTIONS, convert_options=convert_options)
+    return pyarrow.csv.open_csv(
+        stream, parse_options=PARSE_OPTIONS, convert_options=convert_options
+    )
 
 
 def convert(archive: Path, destination: Path) -> None:
@@ -81,7 +85,9 @@ def fetch(url: str, destination: Path) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
 
     parser = argparse.ArgumentParser()
     parser.add_argument("name", choices=DATASETS)

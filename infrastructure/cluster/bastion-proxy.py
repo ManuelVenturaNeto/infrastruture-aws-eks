@@ -37,8 +37,12 @@ class Handler(socketserver.StreamRequestHandler):
 
     def ligar(self, cliente: socket.socket, destino: socket.socket) -> None:
         threads = [
-            threading.Thread(target=self.encaminhar, args=(cliente, destino), daemon=True),
-            threading.Thread(target=self.encaminhar, args=(destino, cliente), daemon=True),
+            threading.Thread(
+                target=self.encaminhar, args=(cliente, destino), daemon=True
+            ),
+            threading.Thread(
+                target=self.encaminhar, args=(destino, cliente), daemon=True
+            ),
         ]
         for thread in threads:
             thread.start()

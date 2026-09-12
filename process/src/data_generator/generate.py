@@ -3,6 +3,7 @@ import logging
 import urllib.request
 from pathlib import Path
 
+import generate_stacks
 import pyarrow as pa
 import pyarrow.csv
 import pyarrow.parquet as pq
@@ -36,6 +37,8 @@ DATASETS = {
     "movies_imdb": [f"{MOVIES_IMDB}/{table}.tsv.gz" for table in IMDB_TABLES],
     "movies_amazon": [f"{MOVIES_AMAZON}/{part}.parquet" for part in range(33)],
 }
+
+STACKS_B3 = "stacks_b3"
 
 SUFFIXES = (".tsv.gz", ".parquet", ".pq")
 PARSE_OPTIONS = pyarrow.csv.ParseOptions(delimiter="\t", quote_char=False)
@@ -84,27 +87,36 @@ def fetch(url: str, destination: Path) -> None:
     archive.unlink()
 
 
+def fetch_all(urls: list[str], output_dir: Path) -> int:
+    for index, url in enumerate(urls, start=1):
+        logger.info("%d/%d %s", index, len(urls), url)
+        fetch(url, output_dir / parquet_name(url))
+    return len(urls)
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
     )
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", choices=DATASETS)
-    parser.add_argument("--out", default="src/datasets")
+    parser.add_argument("name", choices=(*DATASETS, STACKS_B3))
+    parser.add_argument("--out", default="process/src/datasets")
     parser.add_argument("--files", type=int, default=400)
+    parser.add_argument("--start_year", type=int)
+    parser.add_argument("--end_year", type=int)
     args = parser.parse_args()
 
-    urls = DATASETS[args.name][: args.files]
     output_dir = Path(args.out) / args.name
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for index, url in enumerate(urls, start=1):
-        logger.info("%d/%d %s", index, len(urls), url)
-        fetch(url, output_dir / parquet_name(url))
+    if args.name == STACKS_B3:
+        files = generate_stacks.generate(output_dir, args.start_year, args.end_year)
+    else:
+        files = fetch_all(DATASETS[args.name][: args.files], output_dir)
 
     total_bytes = sum(f.stat().st_size for f in output_dir.glob("*.parquet"))
-    logger.info("done: %d files, %.2f GB", len(urls), total_bytes / (1 << 30))
+    logger.info("done: %d files, %.2f GB", files, total_bytes / (1 << 30))
 
 
 if __name__ == "__main__":

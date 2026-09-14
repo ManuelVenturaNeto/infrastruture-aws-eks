@@ -1,3 +1,4 @@
+import io
 import logging
 import shutil
 import urllib.request
@@ -17,6 +18,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 TEXT, INT, PRICE, DATE = "text", "int", "price", "date"
 QUOTE_RECORD = "01"
 PRICE_SCALE = 100.0
+DELIMITER = "\x01"
 
 LAYOUT = (
     ("trade_date", 3, 10, DATE),
@@ -49,10 +51,23 @@ LAYOUT = (
 READ_OPTIONS = pyarrow.csv.ReadOptions(
     column_names=["line"], encoding="latin-1", block_size=64 << 20
 )
-PARSE_OPTIONS = pyarrow.csv.ParseOptions(delimiter="\x01", quote_char=False)
+PARSE_OPTIONS = pyarrow.csv.ParseOptions(delimiter=DELIMITER, quote_char=False)
 CONVERT_OPTIONS = pyarrow.csv.ConvertOptions(column_types={"line": pa.string()})
 
 logger = logging.getLogger(__name__)
+
+
+class SanitizedStream(io.RawIOBase):
+    def __init__(self, stream):
+        self.stream = stream
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, buffer) -> int:
+        data = self.stream.read(len(buffer)).replace(DELIMITER.encode(), b" ")
+        buffer[: len(data)] = data
+        return len(data)
 
 
 def last_year() -> int:
@@ -87,7 +102,7 @@ def convert(archive: Path, destination: Path) -> int:
         bundle.open(bundle.namelist()[0]) as stream,
     ):
         reader = pyarrow.csv.open_csv(
-            stream,
+            io.BufferedReader(SanitizedStream(stream)),
             read_options=READ_OPTIONS,
             parse_options=PARSE_OPTIONS,
             convert_options=CONVERT_OPTIONS,

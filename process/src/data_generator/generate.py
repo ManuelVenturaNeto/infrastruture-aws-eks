@@ -3,10 +3,11 @@ import logging
 import urllib.request
 from pathlib import Path
 
-import generate_stacks
 import pyarrow as pa
 import pyarrow.csv
 import pyarrow.parquet as pq
+
+from process.src.data_generator import generate_stocks
 
 OPENML = "https://data.openml.org/datasets/0004"
 OLIST = "https://huggingface.co/api/datasets/miminmoons/olist-ecommerce-for-delivery-and-review-prediction/parquet/default/train"
@@ -38,7 +39,7 @@ DATASETS = {
     "movies_amazon": [f"{MOVIES_AMAZON}/{part}.parquet" for part in range(33)],
 }
 
-STACKS_B3 = "stacks_b3"
+STOCKS_B3 = "stocks_b3"
 
 SUFFIXES = (".tsv.gz", ".parquet", ".pq")
 PARSE_OPTIONS = pyarrow.csv.ParseOptions(delimiter="\t", quote_char=False)
@@ -100,7 +101,7 @@ def main() -> None:
     )
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", choices=(*DATASETS, STACKS_B3))
+    parser.add_argument("name", choices=(*DATASETS, STOCKS_B3))
     parser.add_argument("--out", default="process/src/datasets")
     parser.add_argument("--files", type=int, default=400)
     parser.add_argument("--start_year", type=int)
@@ -110,8 +111,8 @@ def main() -> None:
     output_dir = Path(args.out) / args.name
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.name == STACKS_B3:
-        files = generate_stacks.generate(output_dir, args.start_year, args.end_year)
+    if args.name == STOCKS_B3:
+        files = generate_stocks.generate(output_dir, args.start_year, args.end_year)
     else:
         files = fetch_all(DATASETS[args.name][: args.files], output_dir)
 

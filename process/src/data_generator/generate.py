@@ -113,6 +113,7 @@ def main() -> None:
 
     if args.name == STOCKS_B3:
         files = generate_stocks.generate(output_dir, args.start_year, args.end_year)
+        generate_stocks.generate_events(output_dir.with_name(f"{args.name}_events"))
     else:
         files = fetch_all(DATASETS[args.name][: args.files], output_dir)
 

@@ -1,0 +1,50 @@
+serviceAccount:
+  create: true
+  name: mlflow
+
+nodeSelector:
+  workload: mlflow
+
+tolerations:
+  - key: workload
+    value: mlflow
+    effect: NoSchedule
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+backendStore:
+  databaseMigration: true
+  databaseConnectionCheck: true
+  postgres:
+    enabled: true
+    host: mlflow-db.mlflow.svc.cluster.local
+    port: 5432
+    database: mlflow
+  existingDatabaseSecret:
+    name: mlflow-db
+    usernameKey: username
+    passwordKey: password
+
+artifactRoot:
+  proxiedArtifactStorage: true
+  s3:
+    enabled: true
+    bucket: kube-system-experiment-mlflow
+    path: artifacts

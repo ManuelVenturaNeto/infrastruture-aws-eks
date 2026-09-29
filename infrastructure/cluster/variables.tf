@@ -33,15 +33,3 @@ variable "image_repositories" {
   type        = list(string)
   default     = ["spark", "spark-gpu", "spark-rapids"]
 }
-
-variable "bastion_instance_type" {
-  description = "Tipo da EC2 do bastion de acesso via SSM."
-  type        = string
-  default     = "t3.micro"
-}
-
-variable "bastion_proxy_port" {
-  description = "Porta do proxy CONNECT dentro do bastion."
-  type        = number
-  default     = 3128
-}

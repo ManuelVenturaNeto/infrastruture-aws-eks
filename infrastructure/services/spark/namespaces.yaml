@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark-operator
+  labels:
+    service: spark
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark-jobs
+  labels:
+    service: spark
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark-history
+  labels:
+    service: spark

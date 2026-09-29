@@ -15,7 +15,7 @@ output "karpenter_node_iam_role_name" {
 
 output "karpenter_queue_name" {
   description = "Fila SQS de interrupcao de spot."
-  value       = module.karpenter.queue_name
+  value       = aws_sqs_queue.karpenter.name
 }
 
 output "azs" {
@@ -41,9 +41,4 @@ output "ecr_registry" {
 output "ecr_repository_urls" {
   description = "URL de cada repositorio ECR criado."
   value       = { for name, repo in aws_ecr_repository.images : name => repo.repository_url }
-}
-
-output "bastion_instance_id" {
-  description = "Instancia usada pelo tunnel.sh para alcancar a API privada do EKS."
-  value       = aws_instance.bastion.id
 }

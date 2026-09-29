@@ -10,8 +10,12 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
+  iam_role_use_name_prefix            = false
+  security_group_use_name_prefix      = false
+  node_security_group_use_name_prefix = false
+
   endpoint_private_access = true
-  endpoint_public_access  = false
+  endpoint_public_access  = true
 
   encryption_config = null
 
@@ -31,6 +35,12 @@ module "eks" {
       min_size     = 2
       max_size     = 3
       desired_size = 2
+
+      use_name_prefix                 = false
+      launch_template_use_name_prefix = false
+      iam_role_name                   = "${var.name_prefix}-system-node"
+      iam_role_use_name_prefix        = false
+      security_group_use_name_prefix  = false
 
       labels = {
         role = "system"
@@ -53,6 +63,7 @@ module "eks" {
       resolve_conflicts_on_update = "OVERWRITE"
 
       configuration_values = jsonencode({
+        enableNetworkPolicy = "true"
         env = {
           ENABLE_PREFIX_DELEGATION = "true"
           WARM_PREFIX_TARGET       = "1"
@@ -81,12 +92,14 @@ module "eks" {
     }
 
     "aws-ebs-csi-driver" = {
+      preserve                    = false
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
 
       configuration_values = jsonencode({
         controller = {
-          tolerations = local.system_taint_tolerations
+          additionalArgs = ["--k8s-tag-cluster-id=${local.cluster_name}"]
+          tolerations    = local.system_taint_tolerations
         }
       })
 
@@ -123,7 +136,9 @@ module "ebs_csi_pod_identity" {
   version = "2.9.0"
 
   name                      = "${var.name_prefix}-ebs-csi"
+  use_name_prefix           = false
   attach_aws_ebs_csi_policy = true
+  aws_ebs_csi_policy_name   = "${var.name_prefix}-ebs-csi"
 
   tags = local.tags
 }

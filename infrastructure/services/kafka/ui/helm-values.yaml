@@ -1,0 +1,32 @@
+yamlApplicationConfig:
+  kafka:
+    clusters:
+      - name: kafka
+        bootstrapServers: kafka-kafka-bootstrap.kafka.svc:9092
+  auth:
+    type: disabled
+  management:
+    health:
+      ldap:
+        enabled: false
+
+nodeSelector:
+  workload: kafka
+
+tolerations:
+  - key: workload
+    value: kafka
+    effect: NoSchedule
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70

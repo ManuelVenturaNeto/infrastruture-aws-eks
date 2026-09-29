@@ -1,0 +1,138 @@
+executor: KubernetesExecutor
+
+nodeSelector:
+  workload: airflow
+
+tolerations:
+  - key: workload
+    value: airflow
+    effect: NoSchedule
+
+data:
+  metadataSecretName: airflow-metadata
+
+fernetKeySecretName: airflow-fernet-key
+apiSecretKeySecretName: airflow-api-secret-key
+jwtSecretName: airflow-jwt-secret
+
+postgresql:
+  enabled: false
+
+dags:
+  gitSync:
+    enabled: true
+    repo: https://github.com/ManuelVenturaNeto/infrastruture-aws-eks.git
+    branch: main
+    subPath: process/src/airflow
+    period: 30s
+    recommendedProbeSetting: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+redis:
+  enabled: false
+
+pgbouncer:
+  enabled: false
+
+statsd:
+  enabled: false
+
+env:
+  - name: AIRFLOW_CONN_AWS_DEFAULT
+    value: aws://
+
+config:
+  logging:
+    remote_logging: "True"
+    remote_base_log_folder: s3://kube-system-experiment-airflow/logs
+    remote_log_conn_id: aws_default
+    delete_local_logs: "True"
+
+createUserJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+
+migrateDatabaseJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+
+scheduler:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  logGroomerSidecar:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+apiServer:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  hpa:
+    enabled: true
+    minReplicaCount: 1
+    maxReplicaCount: 3
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 70
+
+dagProcessor:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 512Mi
+  logGroomerSidecar:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+triggerer:
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 512Mi
+  logGroomerSidecar:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+workers:
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi

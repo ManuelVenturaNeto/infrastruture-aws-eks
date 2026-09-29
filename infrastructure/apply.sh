@@ -6,34 +6,36 @@ REGION="us-east-1"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TF_DIR="${HERE}/cluster"
 CONFIGS="${HERE}/configs"
+SERVICES="${HERE}/services"
 
 titulo() {
   printf '\n==> %s\n' "$1"
 }
 
-nodepools_disponiveis() {
+servicos_disponiveis() {
   local caminho
-  for caminho in "${CONFIGS}"/nodepools/*/; do
+  for caminho in "${SERVICES}"/*/; do
     basename "${caminho}"
   done | sort
 }
 
 uso() {
-  echo "uso: apply.sh [nodepool ...]"
+  echo "uso: apply.sh [servico ...]"
   echo
-  echo "Sem argumentos aplica todos os NodePools. Com argumentos, apenas os citados."
+  echo "Sem argumentos sobe apenas a base: EKS, Karpenter, StorageClass e o device"
+  echo "plugin da GPU. Com argumentos sobe a base e os servicos citados, completos."
   echo
   echo "Disponiveis:"
-  nodepools_disponiveis | sed 's/^/  /'
+  servicos_disponiveis | sed 's/^/  /'
 }
 
-validar_nodepools() {
+validar_servicos() {
   local disponiveis nome
-  disponiveis="$(nodepools_disponiveis)"
+  disponiveis="$(servicos_disponiveis)"
 
-  for nome in "${NODEPOOLS[@]}"; do
+  for nome in "${SERVICOS[@]}"; do
     if ! grep -qxF "${nome}" <<<"${disponiveis}"; then
-      echo "NodePool desconhecido: ${nome}" >&2
+      echo "Servico desconhecido: ${nome}" >&2
       echo >&2
       uso >&2
       exit 1
@@ -46,38 +48,12 @@ criar_infraestrutura() {
   terraform -chdir="${TF_DIR}" init -input=false
 
   titulo "terraform apply"
-  terraform -chdir="${TF_DIR}" apply -input=false
+  terraform -chdir="${TF_DIR}" apply -input=false -auto-approve
 }
 
 gerar_kubeconfig() {
   titulo "Gerando o kubeconfig"
-  aws eks update-kubeconfig --region "${REGION}" --name "${CLUSTER_NAME}"
-}
-
-exigir_acesso_ao_cluster() {
-  if kubectl cluster-info >/dev/null 2>&1; then
-    return
-  fi
-
-  cat >&2 <<TEXTO
-
-A API do EKS nao respondeu.
-
-Este cluster sobe com endpoint_public_access = false: a API so atende de dentro
-da VPC. A infraestrutura ja foi criada, inclusive o bastion. Falta o tunel.
-
-Em outro terminal:
-
-  ./infrastructure/tunnel.sh
-
-Depois, aqui:
-
-  export HTTPS_PROXY=http://localhost:3128
-  ${0} ${NODEPOOLS[*]}
-
-O terraform apply e idempotente: rodar de novo nao recria nada.
-TEXTO
-  exit 1
+  aws eks update-kubeconfig --region "${REGION}" --name "${CLUSTER_NAME}" --alias "${CLUSTER_NAME}"
 }
 
 instalar_plataforma() {
@@ -86,27 +62,21 @@ instalar_plataforma() {
 
   titulo "StorageClass default do cluster"
   kubectl apply -f "${CONFIGS}/storage/"
+
+  titulo "Device plugin da NVIDIA"
+  "${CONFIGS}/gpu/apply.sh"
 }
 
-instalar_operators() {
-  titulo "Spark Operator"
-  "${CONFIGS}/operators/spark/apply.sh"
-
-  titulo "Strimzi, o operator do Kafka"
-  "${CONFIGS}/operators/kafka/apply.sh"
-}
-
-aplicar_nodepools() {
+subir_servicos() {
   local nome
 
-  for nome in "${NODEPOOLS[@]}"; do
-    if [[ "${nome}" == "spark-gpu" ]]; then
-      titulo "Device plugin da NVIDIA, exigido pelo NodePool spark-gpu"
-      "${CONFIGS}/gpu/apply.sh"
+  for nome in "${SERVICOS[@]}"; do
+    titulo "Servico ${nome}"
+    if ! "${SERVICES}/${nome}/apply.sh"; then
+      titulo "Servico ${nome} falhou. Desfazendo para nao deixar pela metade"
+      "${SERVICES}/${nome}/destroy.sh"
+      exit 1
     fi
-
-    titulo "NodePool ${nome}"
-    kubectl apply -f "${CONFIGS}/nodepools/${nome}/"
   done
 }
 
@@ -117,8 +87,14 @@ resumo() {
   titulo "Maquinas de pe"
   kubectl get nodes -L role -L workload -L karpenter.sh/capacity-type
 
-  titulo "Nenhuma maquina de workload sobe agora"
-  echo "O Karpenter so cria EC2 quando existir pod Pending que precise dela."
+  if [[ ${#SERVICOS[@]} -eq 0 ]]; then
+    titulo "Nenhuma maquina de workload sobe agora"
+    echo "Nenhum servico foi pedido. Para subir um: ${0} <servico ...>"
+    return
+  fi
+
+  titulo "Releases instalados"
+  helm list -A
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -126,17 +102,11 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-NODEPOOLS=("$@")
+SERVICOS=("$@")
 
-if [[ ${#NODEPOOLS[@]} -eq 0 ]]; then
-  mapfile -t NODEPOOLS < <(nodepools_disponiveis)
-fi
-
-validar_nodepools
+validar_servicos
 criar_infraestrutura
 gerar_kubeconfig
-exigir_acesso_ao_cluster
 instalar_plataforma
-instalar_operators
-aplicar_nodepools
+subir_servicos
 resumo

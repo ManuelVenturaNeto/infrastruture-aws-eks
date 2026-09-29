@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka
+  labels:
+    service: kafka
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-connect
+  labels:
+    service: kafka
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-streams
+  labels:
+    service: kafka

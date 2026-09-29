@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history
+  namespace: spark-history
+  labels:
+    app: spark-history
+spec:
+  selector:
+    matchLabels:
+      app: spark-history
+  template:
+    metadata:
+      labels:
+        app: spark-history
+    spec:
+      serviceAccountName: spark-history
+
+      nodeSelector:
+        workload: spark
+
+      tolerations:
+        - key: workload
+          value: spark
+          effect: NoSchedule
+
+      initContainers:
+        - name: s3a-jars
+          image: curlimages/curl:8.22.0
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              MAVEN=https://repo1.maven.org/maven2
+              curl -fsSL -o /jars/hadoop-aws-3.5.0.jar \
+                "${MAVEN}/org/apache/hadoop/hadoop-aws/3.5.0/hadoop-aws-3.5.0.jar"
+              curl -fsSL -o /jars/bundle-2.35.4.jar \
+                "${MAVEN}/software/amazon/awssdk/bundle/2.35.4/bundle-2.35.4.jar"
+              curl -fsSL -o /jars/analyticsaccelerator-s3-1.3.1.jar \
+                "${MAVEN}/software/amazon/s3/analyticsaccelerator/analyticsaccelerator-s3/1.3.1/analyticsaccelerator-s3-1.3.1.jar"
+          volumeMounts:
+            - name: s3a-jars
+              mountPath: /jars
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 128Mi
+
+      containers:
+        - name: history-server
+          image: apache/spark:4.2.0
+          command:
+            - /opt/spark/bin/spark-class
+            - org.apache.spark.deploy.history.HistoryServer
+          env:
+            - name: SPARK_DAEMON_CLASSPATH
+              value: /opt/spark/s3a-jars/*
+            - name: SPARK_DAEMON_MEMORY
+              value: 1g
+            - name: SPARK_HISTORY_OPTS
+              value: >-
+                -Dspark.history.fs.logDirectory=s3a://kube-system-experiment-spark/event-logs/
+                -Dspark.hadoop.fs.s3a.endpoint.region=us-east-1
+                -Dspark.hadoop.fs.s3a.aws.credentials.provider=software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+          ports:
+            - name: http
+              containerPort: 18080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: s3a-jars
+              mountPath: /opt/spark/s3a-jars
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1536Mi
+            limits:
+              memory: 1536Mi
+
+      volumes:
+        - name: s3a-jars
+          emptyDir:
+            sizeLimit: 2Gi

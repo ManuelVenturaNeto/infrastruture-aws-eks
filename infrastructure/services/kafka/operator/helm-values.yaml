@@ -1,3 +1,7 @@
+defaultImageRegistry: quay.io
+defaultImageRepository: strimzi
+defaultImageTag: 1.2.0
+
 replicas: 1
 
 watchAnyNamespace: false

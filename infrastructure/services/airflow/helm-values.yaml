@@ -1,3 +1,7 @@
+defaultAirflowRepository: apache/airflow
+defaultAirflowTag: "3.2.2"
+airflowVersion: "3.2.2"
+
 executor: KubernetesExecutor
 
 nodeSelector:

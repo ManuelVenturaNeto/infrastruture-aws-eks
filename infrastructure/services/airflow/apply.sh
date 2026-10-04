@@ -2,7 +2,6 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-CHART_VERSION="1.22.0"
 
 kubectl apply -f "${HERE}/namespaces.yaml"
 kubectl apply -f "${HERE}/networkpolicy.yaml"
@@ -14,7 +13,6 @@ kubectl apply -R -f "${HERE}/nodepools/"
 
 helm upgrade --install airflow airflow \
   --repo https://airflow.apache.org \
-  --version "${CHART_VERSION}" \
   --namespace airflow \
   --values "${HERE}/helm-values.yaml" \
   --timeout 20m \

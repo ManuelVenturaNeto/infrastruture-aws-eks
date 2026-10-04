@@ -2,7 +2,6 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-OPERATOR_VERSION="2.5.2"
 
 kubectl apply -f "${HERE}/namespaces.yaml"
 kubectl apply -f "${HERE}/networkpolicy.yaml"
@@ -14,7 +13,6 @@ kubectl apply -R -f "${HERE}/nodepools/"
 
 helm upgrade --install spark-operator \
   oci://ghcr.io/kubeflow/spark-operator/charts/spark-operator \
-  --version "${OPERATOR_VERSION}" \
   --namespace spark-operator \
   --values "${HERE}/operator/helm-values.yaml" \
   --wait

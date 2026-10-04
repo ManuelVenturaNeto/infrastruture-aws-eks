@@ -1,3 +1,7 @@
+image:
+  repository: burakince/mlflow
+  tag: "3.16.0"
+
 serviceAccount:
   create: true
   name: mlflow

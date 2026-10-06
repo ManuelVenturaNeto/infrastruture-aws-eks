@@ -8,7 +8,7 @@ spec:
   mode: cluster
   image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system-experiment/xgboost:1.0.0
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: local:///opt/spark/jobs/ml_process/01_xgboost/train.py
+  mainApplicationFile: local:///opt/spark/jobs/process_ml/xgboost_shopping/train.py
   arguments:
     - "--input"
     - "file:///opt/spark/datasets/shopping"

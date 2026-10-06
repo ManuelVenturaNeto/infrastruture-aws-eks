@@ -8,8 +8,9 @@ RUN pip3 install --no-cache-dir \
       "pyarrow==22.0.0" \
       "xgboost==3.2.0"
 
-COPY ml_process /opt/spark/jobs/ml_process
+COPY process_ml /opt/spark/jobs/process_ml
+COPY datasets/shopping/shopping /opt/spark/datasets/shopping
 
-RUN chown -R spark:spark /opt/spark/jobs
+RUN chown -R spark:spark /opt/spark/jobs /opt/spark/datasets
 
 USER spark

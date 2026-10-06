@@ -8,7 +8,7 @@ spec:
   mode: cluster
   image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system-experiment/spark-rapids:1.0.0
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: local:///opt/spark/jobs/etl_process/01_spark_pipe_shopping/main.py
+  mainApplicationFile: local:///opt/spark/jobs/process_etl/spark_pipe_shopping/main.py
   arguments:
     - "--input"
     - "file:///opt/spark/datasets/shopping"

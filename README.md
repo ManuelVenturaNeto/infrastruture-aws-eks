@@ -17,7 +17,7 @@ uv run python process/src/data_generator/generate.py --help
 
 ```bash
 uv run python process/src/process_etl/spark_pipe_shopping/main.py \
-  --input process/src/datasets/shopping
+  --input process/src/datasets/shopping/shopping
 ```
 
 Roda em `local[*]`, sem cluster. Pega erro de sintaxe e de schema antes de gastar

@@ -5,8 +5,8 @@ ARG RAPIDS_JAR=rapids-4-spark_2.12-${RAPIDS_VERSION}-cuda12.jar
 
 USER root
 
-COPY etl_process /opt/spark/jobs/etl_process
-COPY datasets/shopping /opt/spark/datasets/shopping
+COPY process_etl /opt/spark/jobs/process_etl
+COPY datasets/shopping/shopping /opt/spark/datasets/shopping
 
 RUN curl -fsSL -o "/opt/spark/jars/${RAPIDS_JAR}" \
       "https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${RAPIDS_VERSION}/${RAPIDS_JAR}" \

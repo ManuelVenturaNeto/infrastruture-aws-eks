@@ -3,11 +3,11 @@ import logging
 import urllib.request
 from pathlib import Path
 
+import generate_insurance
+import generate_stocks
 import pyarrow as pa
 import pyarrow.csv
 import pyarrow.parquet as pq
-
-from process.src.data_generator import generate_stocks
 
 OPENML = "https://data.openml.org/datasets/0004"
 OLIST = "https://huggingface.co/api/datasets/miminmoons/olist-ecommerce-for-delivery-and-review-prediction/parquet/default/train"
@@ -17,6 +17,23 @@ HOTELS = (
 )
 MOVIES_IMDB = "https://datasets.imdbws.com"
 MOVIES_AMAZON = "https://huggingface.co/api/datasets/rohan2810/amazon-movies-meta-reviews-merged/parquet/default/train"
+AMAZON_REVIEWS = "https://huggingface.co/api/datasets/gmongaras/Amazon-Reviews-2023/parquet/default/train"
+AMAZON_META = (
+    "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/resolve/main"
+)
+
+AMAZON_REVIEWS_FILES = 26
+AMAZON_META_SHARDS = {
+    "All_Beauty": 1,
+    "Arts_Crafts_and_Sewing": 4,
+    "Cell_Phones_and_Accessories": 7,
+    "Electronics": 10,
+    "Gift_Cards": 1,
+    "Handmade_Products": 1,
+    "Industrial_and_Scientific": 2,
+    "Musical_Instruments": 2,
+    "Toys_and_Games": 5,
+}
 
 IMDB_TABLES = (
     "title.basics",
@@ -37,9 +54,22 @@ DATASETS = {
     "hotels": [f"{HOTELS}/0.parquet"],
     "movies_imdb": [f"{MOVIES_IMDB}/{table}.tsv.gz" for table in IMDB_TABLES],
     "movies_amazon": [f"{MOVIES_AMAZON}/{part}.parquet" for part in range(33)],
+    "shopping_amazon_reviews": [
+        f"{AMAZON_REVIEWS}/{part}.parquet" for part in range(AMAZON_REVIEWS_FILES)
+    ],
+    "shopping_amazon_meta": [
+        f"{AMAZON_META}/raw_meta_{category}/full-{shard:05d}-of-{shards:05d}.parquet"
+        for category, shards in AMAZON_META_SHARDS.items()
+        for shard in range(shards)
+    ],
 }
 
 STOCKS_B3 = "stocks_b3"
+INSURANCE = {
+    "insurance_health_claims": generate_insurance.generate_health_claims,
+    "insurance_health_beneficiaries": generate_insurance.generate_health_beneficiaries,
+    "insurance_medicare_partd": generate_insurance.generate_medicare_partd,
+}
 
 SUFFIXES = (".tsv.gz", ".parquet", ".pq")
 PARSE_OPTIONS = pyarrow.csv.ParseOptions(delimiter="\t", quote_char=False)
@@ -88,10 +118,20 @@ def fetch(url: str, destination: Path) -> None:
     archive.unlink()
 
 
+def unique_names(urls: list[str]) -> list[str]:
+    """
+    Names each url's parquet file, prefixing the parent folder when two urls share a file name.
+    """
+    names = [parquet_name(url) for url in urls]
+    if len(set(names)) == len(names):
+        return names
+    return [f"{Path(url).parent.name}_{name}" for url, name in zip(urls, names)]
+
+
 def fetch_all(urls: list[str], output_dir: Path) -> int:
-    for index, url in enumerate(urls, start=1):
+    for index, (url, name) in enumerate(zip(urls, unique_names(urls)), start=1):
         logger.info("%d/%d %s", index, len(urls), url)
-        fetch(url, output_dir / parquet_name(url))
+        fetch(url, output_dir / name)
     return len(urls)
 
 
@@ -101,23 +141,25 @@ def main() -> None:
     )
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", choices=(*DATASETS, STOCKS_B3))
+    parser.add_argument("name", choices=(*DATASETS, STOCKS_B3, *INSURANCE))
     parser.add_argument("--out", default="process/src/datasets")
     parser.add_argument("--files", type=int, default=400)
     parser.add_argument("--start_year", type=int)
     parser.add_argument("--end_year", type=int)
     args = parser.parse_args()
 
-    output_dir = Path(args.out) / args.name
+    output_dir = Path(args.out) / args.name / args.name
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if args.name == STOCKS_B3:
         files = generate_stocks.generate(output_dir, args.start_year, args.end_year)
         generate_stocks.generate_events(output_dir.with_name(f"{args.name}_events"))
+    elif args.name in INSURANCE:
+        files = INSURANCE[args.name](output_dir)
     else:
         files = fetch_all(DATASETS[args.name][: args.files], output_dir)
 
-    total_bytes = sum(f.stat().st_size for f in output_dir.glob("*.parquet"))
+    total_bytes = sum(f.stat().st_size for f in output_dir.rglob("*.parquet"))
     logger.info("done: %d files, %.2f GB", files, total_bytes / (1 << 30))
 
 

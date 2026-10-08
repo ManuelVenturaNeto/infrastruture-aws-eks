@@ -24,5 +24,17 @@ dependencies = [
     "xgboost>=3.4.1",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "process/src/data_generator",
+    "process/src/library",
+    "process/src/process_etl",
+    "process/src/process_ml",
+]
+
 [tool.uv]
-package = false
+package = true

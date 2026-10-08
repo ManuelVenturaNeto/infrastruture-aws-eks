@@ -333,6 +333,7 @@ terraform.rc
 # End of https://www.toptal.com/developers/gitignore/api/python,terraform,go,spark
 
 STUDY-*.md
+**/tarefas.md
 process/src/datasets/*
 ### DuckDB ###
 .duckdb/

@@ -14,9 +14,7 @@ from .utils.volume_indicators import VolumeIndicators
 
 
 def build_dag(events: Path) -> Dag:
-    """
-    Builds the transform DAG with notebook steps 5 to 12, in the original order.
-    """
+
     return Dag(
         [
             FilterStocks(),

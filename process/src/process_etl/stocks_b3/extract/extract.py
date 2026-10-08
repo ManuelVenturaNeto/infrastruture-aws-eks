@@ -8,9 +8,7 @@ from .utils.write_delta import WriteDelta
 
 
 def build_dag(source: Path, target: Path) -> Dag:
-    """
-    Builds the extract DAG: reads the raw parquet, writes it as Delta and reads the Delta table back.
-    """
+
     return Dag(
         [
             ReadParquet(source),

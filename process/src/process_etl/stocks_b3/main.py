@@ -12,14 +12,13 @@ from .transform import transform
 
 
 def main() -> None:
-    """
-    Starts Spark, runs extract, transform and load in sequence, and stops the session at the end.
-    """
+
     spark = build_spark("stocks_b3")
     try:
         df = extract.build_dag(SOURCE, TARGET).run()
         df = transform.build_dag(EVENTS).run(df)
         load.build_dag(FEATURES).run(df)
+
     finally:
         spark.stop()
 

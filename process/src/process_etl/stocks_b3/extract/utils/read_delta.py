@@ -1,16 +1,14 @@
 from pathlib import Path
 
-from pyspark.sql import DataFrame, SparkSession
-
-from ...config.dag import Step
+from library.process import Step
+from pyspark.sql import DataFrame
 
 
 class ReadDelta(Step):
-    def __init__(self, spark: SparkSession, target: Path) -> None:
+    def __init__(self, target: Path) -> None:
         """
-        Stores the Spark session and the Delta table directory.
+        Stores the Delta table directory.
         """
-        self.spark = spark
         self.target = target
 
     def run(self, df: DataFrame | None = None) -> DataFrame:

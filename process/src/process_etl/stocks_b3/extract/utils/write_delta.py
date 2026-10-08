@@ -1,18 +1,16 @@
 from pathlib import Path
 
 from delta.tables import DeltaTable
-from pyspark.sql import DataFrame, SparkSession
+from library.process import Step
+from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
-
-from ...config.dag import Step
 
 
 class WriteDelta(Step):
-    def __init__(self, spark: SparkSession, target: Path) -> None:
+    def __init__(self, target: Path) -> None:
         """
-        Stores the Spark session and the Delta table target directory.
+        Stores the Delta table target directory.
         """
-        self.spark = spark
         self.target = target
 
     def run(self, df: DataFrame) -> DataFrame:

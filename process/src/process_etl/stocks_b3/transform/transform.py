@@ -1,8 +1,7 @@
 from pathlib import Path
 
-from pyspark.sql import SparkSession
+from library.process import Dag
 
-from ..config.dag import Dag
 from .utils.adjust_corporate_actions import AdjustCorporateActions
 from .utils.filter_stocks import FilterStocks
 from .utils.log_return import LogReturn
@@ -14,7 +13,7 @@ from .utils.trend_flags import TrendFlags
 from .utils.volume_indicators import VolumeIndicators
 
 
-def build_dag(spark: SparkSession, events: Path) -> Dag:
+def build_dag(events: Path) -> Dag:
     """
     Builds the transform DAG with notebook steps 5 to 12, in the original order.
     """
@@ -22,7 +21,7 @@ def build_dag(spark: SparkSession, events: Path) -> Dag:
         [
             FilterStocks(),
             NormalizePrice(),
-            AdjustCorporateActions(spark, events),
+            AdjustCorporateActions(events),
             LogReturn(),
             ReturnZScore(),
             SlowStochastic(),

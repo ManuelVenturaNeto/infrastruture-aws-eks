@@ -1,7 +1,7 @@
+from library.process import Step
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from ...config.dag import Step
 from .windows import by_ticker
 
 PRICES = ("open_price", "high_price", "low_price", "close_price")

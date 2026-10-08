@@ -1,8 +1,7 @@
 from pathlib import Path
 
+from library.process import Step
 from pyspark.sql import DataFrame
-
-from ...config.dag import Step
 
 
 class WriteFeatures(Step):

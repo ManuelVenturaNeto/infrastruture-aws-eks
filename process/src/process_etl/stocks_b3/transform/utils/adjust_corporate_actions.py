@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from pyspark.sql import DataFrame, SparkSession, Window
+from library.process import Step
+from pyspark.sql import DataFrame, Window
 from pyspark.sql import functions as F
-
-from ...config.dag import Step
 
 PRICES = ("open_price", "high_price", "low_price", "close_price")
 REVERSE_SPLIT = "GRUPAMENTO"
@@ -34,11 +33,10 @@ MATCH_DAYS = 5
 
 
 class AdjustCorporateActions(Step):
-    def __init__(self, spark: SparkSession, events: Path) -> None:
+    def __init__(self, events: Path) -> None:
         """
-        Stores the Spark session and the directory of the B3 stock-events parquet.
+        Stores the directory of the B3 stock-events parquet.
         """
-        self.spark = spark
         self.events = events
 
     def listed_events(self) -> DataFrame:

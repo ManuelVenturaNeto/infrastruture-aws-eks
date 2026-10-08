@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from ..config.dag import Dag
+from library.process import Dag
+
 from .utils.write_features import WriteFeatures
 
 

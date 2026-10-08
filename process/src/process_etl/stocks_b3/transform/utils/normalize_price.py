@@ -1,7 +1,6 @@
+from library.process import Step
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
-
-from ...config.dag import Step
 
 
 class NormalizePrice(Step):

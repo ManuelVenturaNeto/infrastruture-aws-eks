@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER_NAME="kube-system-experiment-eks"
+CLUSTER_NAME="kube-system-eks"
 REGION="us-east-1"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TF_DIR="${HERE}/cluster"

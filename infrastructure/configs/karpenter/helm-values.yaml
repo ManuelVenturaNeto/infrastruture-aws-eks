@@ -1,6 +1,6 @@
 settings:
-  clusterName: kube-system-experiment-eks
-  interruptionQueue: kube-system-experiment-karpenter
+  clusterName: kube-system-eks
+  interruptionQueue: kube-system-karpenter
 
 serviceAccount:
   name: karpenter

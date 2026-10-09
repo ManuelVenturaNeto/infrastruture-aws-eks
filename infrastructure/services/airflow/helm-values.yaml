@@ -53,7 +53,7 @@ env:
 config:
   logging:
     remote_logging: "True"
-    remote_base_log_folder: s3://kube-system-experiment-airflow/logs
+    remote_base_log_folder: s3://kube-system-airflow/logs
     remote_log_conn_id: aws_default
     delete_local_logs: "True"
 

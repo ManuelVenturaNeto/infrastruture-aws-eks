@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 1.10"
 
   backend "s3" {
-    bucket       = "kube-system-experiment-tfstate"
+    bucket       = "kube-system-tfstate"
     key          = "services/mlflow/terraform.tfstate"
     region       = "us-east-1"
     use_lockfile = true

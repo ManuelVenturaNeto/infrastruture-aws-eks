@@ -50,5 +50,5 @@ artifactRoot:
   proxiedArtifactStorage: true
   s3:
     enabled: true
-    bucket: kube-system-experiment-mlflow
+    bucket: kube-system-mlflow
     path: artifacts

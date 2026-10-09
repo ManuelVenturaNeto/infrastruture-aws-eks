@@ -3,7 +3,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TF_DIR="${HERE}/terraform"
-STATE_BUCKET="kube-system-experiment-tfstate"
+STATE_BUCKET="kube-system-tfstate"
 STATE_KEY="services/spark/terraform.tfstate"
 
 cluster_acessivel() {

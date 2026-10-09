@@ -107,7 +107,7 @@ NAT (*Network Address Translation*), CoreDNS, Karpenter e o node group `system`.
 
 O Terraform de cada serviço acha a base pelos nomes fixos (VPC, subnets, cluster) e
 escreve direto no cluster os Secrets com a senha do RDS. Por isso ele usa o contexto
-`kube-system-experiment-eks` do kubeconfig, que o `apply.sh` cria com `--alias`.
+`kube-system-eks` do kubeconfig, que o `apply.sh` cria com `--alias`.
 
 ### Acessando as UIs
 
@@ -120,13 +120,13 @@ kubectl port-forward -n spark-history svc/spark-history 18080:18080
 kubectl port-forward -n kafka svc/kafka-ui 8081:80
 ```
 
-O History Server lê `s3a://kube-system-experiment-spark/event-logs/`. Ele só mostra
+O History Server lê `s3a://kube-system-spark/event-logs/`. Ele só mostra
 um job se o job escrever ali (`spark.eventLog.enabled=true` e `spark.eventLog.dir`
 apontando para esse caminho), com o `hadoop-aws` no classpath.
 
 ### Estado do Terraform
 
-Todo estado mora no bucket `kube-system-experiment-tfstate`, com versionamento e
+Todo estado mora no bucket `kube-system-tfstate`, com versionamento e
 lock por arquivo (`use_lockfile`). O `state/apply.sh` cria o bucket na primeira vez
 e não faz nada nas seguintes. Nenhum script apaga esse bucket.
 
@@ -194,7 +194,7 @@ estado.** Em ordem:
 3. Roda o `terraform destroy` da base.
 4. Com `--include-lake`, roda o `terraform destroy` do lake, que apaga o bucket com
    todo o conteúdo. Sem a flag, só avisa que o lake continua.
-5. Apaga os volumes EBS e snapshots com a tag `kubernetes.io/cluster/kube-system-experiment-eks`,
+5. Apaga os volumes EBS e snapshots com a tag `kubernetes.io/cluster/kube-system-eks`,
    que o driver EBS põe em tudo o que cria.
 
 No fim lista volumes soltos e snapshots que ainda existirem na conta. O que aparecer

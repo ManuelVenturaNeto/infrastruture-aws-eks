@@ -3,7 +3,7 @@ kind: EC2NodeClass
 metadata:
   name: spark-gpu
 spec:
-  role: kube-system-experiment-karpenter-node
+  role: kube-system-karpenter-node
 
   amiFamily: AL2023
   amiSelectorTerms:
@@ -12,11 +12,11 @@ spec:
 
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: kube-system-experiment-eks
+        karpenter.sh/discovery: kube-system-eks
 
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: kube-system-experiment-eks
+        karpenter.sh/discovery: kube-system-eks
 
   blockDeviceMappings:
     - deviceName: /dev/xvda
@@ -27,6 +27,6 @@ spec:
         deleteOnTermination: true
 
   tags:
-    Project: kube-system-experiment
+    Project: kube-system
     ManagedBy: karpenter
     Workload: spark-gpu

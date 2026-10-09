@@ -77,7 +77,7 @@ aws login
 
    ```bash
    REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
-   IMAGE=${REGISTRY}/kube-system-experiment/spark:1.0.0
+   IMAGE=${REGISTRY}/kube-system/spark:1.0.0
 
    aws ecr get-login-password --region us-east-1 \
      | docker login --username AWS --password-stdin "${REGISTRY}"

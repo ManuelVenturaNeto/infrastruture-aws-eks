@@ -3,18 +3,18 @@ kind: EC2NodeClass
 metadata:
   name: kafka-streams
 spec:
-  role: kube-system-experiment-karpenter-node
+  role: kube-system-karpenter-node
 
   amiSelectorTerms:
     - alias: al2023@latest
 
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: kube-system-experiment-eks
+        karpenter.sh/discovery: kube-system-eks
 
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: kube-system-experiment-eks
+        karpenter.sh/discovery: kube-system-eks
 
   blockDeviceMappings:
     - deviceName: /dev/xvda
@@ -25,6 +25,6 @@ spec:
         deleteOnTermination: true
 
   tags:
-    Project: kube-system-experiment
+    Project: kube-system
     ManagedBy: karpenter
     Workload: kafka-streams

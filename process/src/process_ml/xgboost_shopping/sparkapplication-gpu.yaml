@@ -6,7 +6,7 @@ metadata:
 spec:
   type: Python
   mode: cluster
-  image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system-experiment/xgboost-gpu:1.0.0
+  image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system/xgboost-gpu:1.0.0
   imagePullPolicy: IfNotPresent
   mainApplicationFile: local:///opt/spark/jobs/process_ml/xgboost_shopping/train.py
   arguments:

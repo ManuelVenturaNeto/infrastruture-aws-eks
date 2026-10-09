@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BUCKET="kube-system-experiment-tfstate"
+BUCKET="kube-system-tfstate"
 REGION="us-east-1"
 
 if aws s3api head-bucket --bucket "${BUCKET}" 2>/dev/null; then

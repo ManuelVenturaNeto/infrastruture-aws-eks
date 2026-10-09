@@ -62,7 +62,7 @@ spec:
               value: 1g
             - name: SPARK_HISTORY_OPTS
               value: >-
-                -Dspark.history.fs.logDirectory=s3a://kube-system-experiment-spark/event-logs/
+                -Dspark.history.fs.logDirectory=s3a://kube-system-spark/event-logs/
                 -Dspark.hadoop.fs.s3a.endpoint.region=us-east-1
                 -Dspark.hadoop.fs.s3a.aws.credentials.provider=software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
           ports:

@@ -27,6 +27,7 @@ Os detalhes de cada parte estão abaixo.
 ## Pré-requisitos
 
 ```bash
+aws login
 terraform -version
 aws sts get-caller-identity       # credenciais validas
 kubectl version --client

@@ -21,8 +21,8 @@ class DistinctSelect(Step):
             F.concat_ws("_", F.col("user_id"), F.col("timestamp")).alias("id"),
             F.col("rating"),
             F.col("user_id"),
-            F.timestamp_micros("timestamp").alias("timestamp"),
-            F.date_format(F.timestamp_micros("timestamp"), "yyyy-MM").alias(
+            F.timestamp_millis("timestamp").alias("timestamp"),
+            F.date_format(F.timestamp_millis("timestamp"), "yyyy-MM").alias(
                 "year_month"
             ),
             F.to_json(F.struct(F.col("title"), F.col("text"))).alias("full_text"),

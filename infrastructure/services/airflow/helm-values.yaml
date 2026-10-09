@@ -51,6 +51,8 @@ env:
     value: aws://
 
 config:
+  core:
+    default_timezone: America/Sao_Paulo
   logging:
     remote_logging: "True"
     remote_base_log_folder: s3://kube-system-airflow/logs

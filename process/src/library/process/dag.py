@@ -1,6 +1,10 @@
+import logging
+import time
 from abc import ABC, abstractmethod
 
 from pyspark.sql import DataFrame, SparkSession
+
+logger = logging.getLogger(__name__)
 
 
 class Step(ABC):
@@ -29,12 +33,29 @@ class Dag:
         """
         Runs the steps in order, feeding each step's output into the next one.
         """
-        for step in self.steps:
-            df = step.run(df)
+        app = SparkSession.getActiveSession().conf.get("spark.app.name")
+        logger.info("job %s started", app)
+        started = time.monotonic()
 
-            if not isinstance(df, DataFrame):
-                raise TypeError(
-                    f"{type(step).__name__}.run() returned {type(df).__name__}, expected DataFrame"
-                )
+        try:
+            for step in self.steps:
+                name = type(step).__name__
+                logger.info("step %s started", name)
 
+                df = step.run(df)
+
+                if not isinstance(df, DataFrame):
+                    raise TypeError(
+                        f"{name}.run() returned {type(df).__name__}, expected DataFrame"
+                    )
+
+                logger.info("step %s finished", name)
+
+        except Exception:
+            logger.exception(
+                "job %s failed after %.1fs", app, time.monotonic() - started
+            )
+            raise
+
+        logger.info("job %s finished in %.1fs", app, time.monotonic() - started)
         return df

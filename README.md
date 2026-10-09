@@ -6,14 +6,32 @@ Service*) ou pelo Airflow. No cluster, o Karpenter cria máquinas spot e com GPU
 S3 (*Simple Storage Service*).
 
 ```mermaid
-flowchart LR
-  G[data_generator] -->|aws s3 sync| L[(Lake S3)]
-  L --> J[Job Spark<br/>Dag de Steps]
-  J -->|Delta| L
-  J -.local.-> U[uv run]
-  J -.cluster.-> K[SparkApplication<br/>Spark Operator]
-  A[DAG do Airflow] -->|SparkKubernetesOperator| K
-  K --> N[Karpenter<br/>spot e GPU]
+flowchart TB
+  G[data_generator] e1@-->|aws s3 sync| L[(Lake S3)]
+  L e2@--> J[Job Spark<br/>Dag de Steps]
+  J e3@-->|Delta| L
+  J e4@-.->|local| U[uv run]
+  J e5@-.->|cluster| K[SparkApplication<br/>Spark Operator]
+  A[DAG do Airflow] e6@-->|SparkKubernetesOperator| K
+  K e7@--> N[Karpenter<br/>spot e GPU]
+
+  e1@{ animate: true }
+  e2@{ animate: true }
+  e3@{ animate: true }
+  e4@{ animate: true }
+  e5@{ animate: true }
+  e6@{ animate: true }
+  e7@{ animate: true }
+
+  classDef data fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef compute fill:#ffedd5,stroke:#ea580c,color:#7c2d12
+  classDef orchestration fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef infra fill:#dcfce7,stroke:#16a34a,color:#14532d
+
+  class G,L data
+  class J,U compute
+  class A,K orchestration
+  class N infra
 ```
 
 ## Rodar local

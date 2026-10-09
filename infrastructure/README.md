@@ -1,6 +1,28 @@
 # infrastructure
 
-Sobe e derruba o cluster EKS (*Elastic Kubernetes Service*).
+Sobe e derruba, com um comando cada, um cluster EKS (*Elastic Kubernetes Service*)
+pronto para rodar os jobs Spark: Karpenter criando máquinas spot e GPU (*Graphics
+Processing Unit*) sob demanda, lake de dados no S3 (*Simple Storage Service*) e os
+serviços que você escolher.
+
+## Em um minuto
+
+```bash
+./infrastructure/apply.sh spark            # base + Spark
+./infrastructure/apply.sh airflow spark    # base + Airflow + Spark
+./infrastructure/destroy.sh                # derruba tudo, menos o lake
+```
+
+| O que              | Detalhe                                      |
+| ------------------ | -------------------------------------------- |
+| Base               | EKS, rede, Karpenter, lake de dados e estado |
+|                    | do Terraform                                 |
+| Serviços opcionais | `airflow`, `spark`, `mlflow`, `kafka`        |
+| Custo da base      | ~US$ 167/mês, com ou sem job rodando         |
+| Custo dos serviços | somam por hora enquanto estão de pé          |
+| Interfaces web     | `kubectl port-forward`, sem LoadBalancer     |
+
+Os detalhes de cada parte estão abaixo.
 
 ## Pré-requisitos
 

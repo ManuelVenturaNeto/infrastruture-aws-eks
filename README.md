@@ -1,103 +1,152 @@
 # project-pipeline-distribuited-spark-EKS
 
-Processos Spark rodando no EKS (*Elastic Kubernetes Service*). Todos os comandos
-rodam da raiz do repositório. Para subir o cluster, veja
-[infrastructure/README.md](infrastructure/README.md).
+Pipelines Spark que rodam do mesmo jeito no seu notebook, num cluster EKS
+(*Elastic Kubernetes Service*) e orquestrados pelo Airflow, sem mudar o código.
 
-## Rodar
+O que o projeto mostra:
 
-### 1. Gerar os dados
+- **Um código, três ambientes.** O job é um `Dag` de `Step`s da `library`. A
+  sessão Spark descobre sozinha se está local ou no Kubernetes.
+- **Máquinas só quando há trabalho.** O Karpenter sobe EC2 (*Elastic Compute
+  Cloud*) spot para os executors e GPU (*Graphics Processing Unit*) para os jobs
+  acelerados com RAPIDS, e desliga tudo quando o job termina.
+- **Lake de dados no S3** (*Simple Storage Service*) em Delta Lake, que sobrevive
+  ao cluster ser destruído.
+- **Infraestrutura inteira em dois comandos**: `apply.sh` e `destroy.sh`.
 
-```bash
-uv run python process/src/data_generator/generate.py shopping
-uv run python process/src/data_generator/generate.py --help
+## Como as peças se ligam
+
+```mermaid
+flowchart LR
+  G[data_generator] -->|aws s3 sync| L[(Lake S3)]
+  L --> J[Job Spark<br/>Dag de Steps]
+  J -->|Delta| L
+  J -.local.-> U[uv run]
+  J -.cluster.-> K[SparkApplication<br/>Spark Operator]
+  A[DAG do Airflow] -->|SparkKubernetesOperator| K
+  K --> N[Karpenter<br/>spot e GPU]
 ```
 
-Para os jobs no cluster, envie os dados para o lake. O lake espelha
-`process/src/datasets/`, e o `sync` só manda o que mudou:
+## Rodar local em 3 passos
+
+Precisa de [uv](https://docs.astral.sh/uv/) e Java 17. O devcontainer em
+`.devcontainer/` já traz os dois. Todos os comandos rodam da raiz.
 
 ```bash
-uv run python process/src/data_generator/generate.py shopping_amazon_reviews
-aws s3 sync process/src/datasets/ s3://kube-system-lake/
+uv sync
+uv run python process/src/data_generator/generate.py stocks_b3 --start_year 2020 --end_year 2024
+uv run python -m process_etl.stocks_b3.main
 ```
 
-### 2. Testar local
+O primeiro comando instala as dependências. O segundo baixa as cotações de 2020
+a 2024 da B3 (*Brasil, Bolsa, Balcão*) para `process/src/datasets/`. O terceiro calcula os
+indicadores e grava em Delta ao lado do dado bruto. Nada disso usa AWS. Na
+primeira execução o Spark baixa os jars do Delta, então precisa de internet.
 
-```bash
-uv run python process/src/process_etl/spark_pipe_shopping/main.py \
-  --input process/src/datasets/shopping/shopping
-```
+## Pipelines
 
-Roda em `local[*]`, sem cluster. Pega erro de sintaxe e de schema antes de gastar
-EC2 (*Elastic Compute Cloud*).
+Cada job roda em CPU (*Central Processing Unit*) ou em GPU:
 
-### 3. Construir e subir a imagem
+| Job                   | O que faz                               | Roda em |
+| --------------------- | --------------------------------------- | ------- |
+| `shopping_amazon`     | deduplica `shopping_amazon_reviews` e   | GPU     |
+|                       | grava Delta por mês                     |         |
+| `stocks_b3`           | indicadores técnicos das ações da B3    | CPU     |
+| `xgboost_shopping`    | treina XGBoost para atraso de entrega   | CPU/GPU |
+| `spark_pipe_shopping` | legado: lê `shopping` e mostra o schema | CPU/GPU |
 
-```bash
-REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
-IMAGE=${REGISTRY}/kube-system-experiment/spark:1.0.0
+O `shopping_amazon` usa RAPIDS (`build_spark(gpu=True)`), então precisa de GPU
+inclusive local. Os datasets e seus tamanhos estão no
+[README do data_generator](process/src/data_generator/README.md).
 
-aws ecr get-login-password --region us-east-1 \
-  | docker login --username AWS --password-stdin "${REGISTRY}"
+## Rodar no cluster
 
-docker build --platform linux/amd64 \
-  --file process/src/process_etl/spark_pipe_shopping/images/cpu/Dockerfile \
-  --tag "${IMAGE}" process/src
+Com a infraestrutura de pé ([infrastructure/README.md](infrastructure/README.md)),
+o caminho é sempre o mesmo:
 
-docker push "${IMAGE}"
-```
+1. **Dados no lake.** O lake espelha `process/src/datasets/`, e o `sync` só manda
+   o que mudou:
 
-- `--platform linux/amd64` é obrigatório: imagem ARM sobe sem erro e só falha no
-  cluster, com `exec format error`.
-- O contexto é `process/src` (último argumento): os `COPY` do Dockerfile são
-  relativos a ele.
-- A tag é imutável no ECR (*Elastic Container Registry*): código novo, tag nova.
+   ```bash
+   uv run python process/src/data_generator/generate.py shopping_amazon_reviews
+   aws s3 sync process/src/datasets/ s3://kube-system-lake/
+   ```
 
-### 4. Disparar
+2. **Imagem no ECR** (*Elastic Container Registry*):
 
-No `sparkapplication.yaml`, troque `ACCOUNT_ID` pela sua conta e confira `image`,
-`mainApplicationFile` (caminho dentro da imagem) e `arguments`.
+   ```bash
+   REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
+   IMAGE=${REGISTRY}/kube-system-experiment/spark:1.0.0
 
-```bash
-kubectl apply -f process/src/process_etl/spark_pipe_shopping/sparkapplication.yaml
-```
+   aws ecr get-login-password --region us-east-1 \
+     | docker login --username AWS --password-stdin "${REGISTRY}"
 
-### 5. Acompanhar
+   docker build --platform linux/amd64 \
+     --file process/src/process_etl/spark_pipe_shopping/images/cpu/Dockerfile \
+     --tag "${IMAGE}" process/src
 
-```bash
-kubectl get sparkapplication -n spark-jobs -w
-kubectl get pods -n spark-jobs -o wide
-kubectl logs -n spark-jobs <nome-do-job>-driver -f
-```
+   docker push "${IMAGE}"
+   ```
 
-Pod `Pending` por 1 a 3 minutos é a EC2 subindo.
+   - `--platform linux/amd64` é obrigatório: imagem ARM sobe sem erro e só falha
+     no cluster, com `exec format error`.
+   - O contexto é `process/src`: os `COPY` do Dockerfile são relativos a ele.
+   - A tag é imutável no ECR: código novo, tag nova.
 
-### 6. Rodar de novo ou limpar
+3. **Disparar.** No `sparkapplication.yaml`, troque `ACCOUNT_ID` pela sua conta e
+   confira `image`, `mainApplicationFile` (caminho dentro da imagem) e
+   `arguments`:
 
-Aplicar o mesmo nome outra vez não faz nada. Apague antes:
+   ```bash
+   kubectl apply -f process/src/process_etl/spark_pipe_shopping/sparkapplication.yaml
+   ```
 
-```bash
-kubectl delete sparkapplication <nome> -n spark-jobs
-```
+4. **Acompanhar.** Pod `Pending` por 1 a 3 minutos é a EC2 subindo:
 
-O Karpenter encerra as máquinas vazias depois de 5 minutos.
+   ```bash
+   kubectl get sparkapplication -n spark-jobs -w
+   kubectl logs -n spark-jobs <nome-do-job>-driver -f
+   ```
+
+5. **Rodar de novo.** Aplicar o mesmo nome outra vez não faz nada. Apague antes;
+   o Karpenter encerra as máquinas vazias depois de 5 minutos:
+
+   ```bash
+   kubectl delete sparkapplication <nome> -n spark-jobs
+   ```
+
+### Pelo Airflow
+
+As DAGs (*Directed Acyclic Graphs*) ficam em `process/src/airflow/`. Commit e push na `main`, e o git-sync
+entrega ao Airflow em até 30 s. A task usa o `SparkKubernetesOperator`, que aplica
+o mesmo `sparkapplication.yaml` e acompanha o driver até o fim.
+
+## Estrutura
+
+| Pasta                         | O que tem                                 |
+| ----------------------------- | ----------------------------------------- |
+| `process/src/library/`        | `Dag`, `Step` e `build_spark`, usados por |
+|                               | todos os jobs                             |
+| `process/src/process_etl/`    | jobs de ETL (*Extract, Transform, Load*)  |
+| `process/src/process_ml/`     | treino de modelos                         |
+| `process/src/data_generator/` | baixa os datasets em parquet              |
+| `process/src/images/`         | runtime: Spark, Delta, S3 e RAPIDS        |
+| `process/src/airflow/`        | DAGs, entregues ao Airflow por git-sync   |
+| `infrastructure/`             | EKS, Karpenter, lake e serviços           |
 
 ## GPU
 
-Há duas imagens de GPU (*Graphics Processing Unit*), e elas não se substituem:
+Há duas imagens de GPU, e elas não se substituem:
 
-| Manifesto                      | Imagem         | O que acelera              |
-| ------------------------------ | -------------- | -------------------------- |
-| `sparkapplication-rapids.yaml` | `spark-rapids` | Spark SQL inteiro, sem     |
-|                                | (Spark 3.5.9)  | mudar código               |
-| `sparkapplication-gpu.yaml`    | `spark-gpu`    | só o XGBoost, com          |
-|                                | (Spark 4.2.0)  | `device="cuda"`            |
+| Imagem         | Dockerfile                    | O que acelera          |
+| -------------- | ----------------------------- | ---------------------- |
+| `spark-rapids` | `images/base-gpu-rapids`      | Spark SQL inteiro, sem |
+|                |                               | mudar código           |
+| `spark-gpu`    | `xgboost_shopping/images/gpu` | só o XGBoost, com      |
+|                |                               | `device="cuda"`        |
 
-O RAPIDS não tem suporte a Spark 4, por isso a imagem dele fica no 3.5.9.
-
-Mandar a imagem de CPU (*Central Processing Unit*) para o NodePool `spark-gpu` não
-dá erro: roda em CPU e a GPU fica parada, custando. Para confirmar que a GPU está
-em uso:
+Mandar a imagem de CPU para o NodePool `spark-gpu` não dá erro: roda em CPU e a
+GPU fica parada, custando. Para confirmar que a GPU está em uso:
 
 ```bash
 kubectl logs -n spark-jobs <job>-exec-1 | grep -i "rapids\|cuda\|gpu"
@@ -120,8 +169,3 @@ kubectl describe pod -n spark-jobs <pod>
 
 Em job `type: Python` o Spark soma 40% de memória: `memory: 8g` vira ~11,2Gi por
 pod, e é por esse número que o Karpenter escolhe a máquina.
-
-## Airflow
-
-As DAGs ficam em `process/src/airflow/`. Commit e push na `main` e o git-sync
-entrega ao Airflow em até 30 s.

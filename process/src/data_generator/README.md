@@ -1,7 +1,31 @@
 # data_generator
 
 Baixa cada dataset em parquet para `process/src/datasets/<nome>/<nome>`. Rodar da
-raiz do repositório.
+raiz do repositório:
+
+```bash
+uv run python process/src/data_generator/generate.py <dataset>
+```
+
+| Dataset                          | Tamanho  | O que é                        |
+| -------------------------------- | -------- | ------------------------------ |
+| `hotels`                         | ~1 MB    | reservas de hotel              |
+| `credit`                         | ~3 MB    | inadimplência de crédito       |
+| `insurance`                      | ~13 MB   | acionamento de seguro de carro |
+| `shopping`                       | ~16 MB   | pedidos do Olist               |
+| `cards`                          | ~70 MB   | fraude em cartão               |
+| `stocks_b3`                      | ~540 MB  | cotações da bolsa desde 1986   |
+| `real_estate`                    | ~1,7 GB  | empréstimos da Fannie Mae      |
+| `movies_imdb`                    | ~1,9 GB  | base pública de filmes         |
+| `movies_amazon`                  | ~2,1 GB  | avaliações de filmes da Amazon |
+| `shopping_amazon_meta`           | ~5,4 GB  | catálogo de produtos Amazon    |
+| `insurance_health_beneficiaries` | ~13 GB   | planos de saúde: beneficiários |
+| `shopping_amazon_reviews`        | ~18,1 GB | avaliações de produtos Amazon  |
+| `insurance_medicare_partd`       | ~22 GB   | medicamentos do Medicare       |
+| `insurance_health_claims`        | ~35 GB   | planos de saúde: atendimentos  |
+
+Para começar, use um dos pequenos. O `stocks_b3` aceita `--start_year` e
+`--end_year` para baixar só alguns anos. O detalhe de cada dataset vem abaixo.
 
 ## shopping
 

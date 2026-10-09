@@ -1,12 +1,16 @@
-resource "aws_s3_bucket" "spark" {
-  bucket        = local.name
-  force_destroy = true
+module "storage" {
+  source = "../../../modules/service-storage"
 
-  tags = local.tags
+  bucket_name      = local.name
+  role_name        = "${local.name}-jobs"
+  cluster_name     = local.cluster_name
+  namespace        = "spark-jobs"
+  service_accounts = ["spark"]
+  tags             = local.tags
 }
 
 resource "aws_s3_object" "event_logs" {
-  bucket  = aws_s3_bucket.spark.id
+  bucket  = module.storage.bucket_id
   key     = "event-logs/"
   content = ""
 }

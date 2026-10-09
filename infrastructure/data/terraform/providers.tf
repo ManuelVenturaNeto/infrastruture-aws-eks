@@ -2,8 +2,8 @@ terraform {
   required_version = ">= 1.10"
 
   backend "s3" {
-    bucket       = "kube-system-experiment-tfstate"
-    key          = "services/spark/terraform.tfstate"
+    bucket       = "kube-system-tfstate"
+    key          = "data/terraform.tfstate"
     region       = "us-east-1"
     use_lockfile = true
   }

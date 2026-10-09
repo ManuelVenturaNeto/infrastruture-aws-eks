@@ -35,10 +35,10 @@ desta conta.
 ./infrastructure/apply.sh --help           # lista os servicos disponiveis
 ```
 
-**Sem argumento** sobe só a base: `terraform` → kubeconfig → Karpenter →
-StorageClass `gp3` → device plugin da NVIDIA. Nenhuma máquina de workload sobe; o
-Karpenter só cria EC2 (*Elastic Compute Cloud*) quando existir pod `Pending` que
-precise dela.
+**Sem argumento** sobe só a base: bucket de estado → `terraform` do cluster → lake
+de dados → kubeconfig → Karpenter → StorageClass `gp3` → device plugin da NVIDIA.
+Nenhuma máquina de workload sobe; o Karpenter só cria EC2 (*Elastic Compute Cloud*)
+quando existir pod `Pending` que precise dela.
 
 **Com argumento** sobe a base e, depois, cada serviço citado, **completo**. Se
 qualquer passo de um serviço falhar, o script roda o `destroy.sh` daquele serviço
@@ -76,7 +76,8 @@ Cada serviço é isolado dos outros em todas as camadas:
 | Banco      | SG (*Security Group*) próprio nas máquinas; o RDS só aceita     |
 |            | esse SG                                                         |
 | AWS        | role de Pod Identity própria, com acesso só ao próprio bucket   |
-| Terraform  | estado próprio em `services/<serviço>/terraform/`               |
+| Terraform  | estado próprio na chave `services/<serviço>/` do bucket de      |
+|            | estado                                                          |
 
 O que continua compartilhado é a base: control plane, VPC (*Virtual Private Cloud*),
 NAT (*Network Address Translation*), CoreDNS, Karpenter e o node group `system`.
@@ -100,6 +101,27 @@ O History Server lê `s3a://kube-system-experiment-spark/event-logs/`. Ele só m
 um job se o job escrever ali (`spark.eventLog.enabled=true` e `spark.eventLog.dir`
 apontando para esse caminho), com o `hadoop-aws` no classpath.
 
+### Estado do Terraform
+
+Todo estado mora no bucket `kube-system-experiment-tfstate`, com versionamento e
+lock por arquivo (`use_lockfile`). O `state/apply.sh` cria o bucket na primeira vez
+e não faz nada nas seguintes. Nenhum script apaga esse bucket.
+
+| Camada    | Chave                                  |
+| --------- | -------------------------------------- |
+| `cluster` | `cluster/terraform.tfstate`            |
+| `data`    | `data/terraform.tfstate`               |
+| serviço   | `services/<serviço>/terraform.tfstate` |
+
+### Lake de dados
+
+O bucket `kube-system-lake` guarda os dados do pipeline, separados do
+estado de qualquer serviço. Ele espelha `process/src/datasets/`: o caminho de um
+dataset no lake é o mesmo de local, só com outro prefixo.
+
+A role dos jobs Spark (service account `spark` em `spark-jobs`) lê e escreve no
+lake. O lake sobrevive ao `destroy.sh` da raiz; só é apagado com `--include-lake`.
+
 ### DAGs do Airflow
 
 O Airflow lê as DAGs por git-sync: um sidecar em cada pod puxa a pasta
@@ -107,19 +129,39 @@ O Airflow lê as DAGs por git-sync: um sidecar em cada pod puxa a pasta
 `github.com/ManuelVenturaNeto/infrastruture-aws-eks` a cada 30 s. Commit e push na
 `main` basta; não há rebuild nem redeploy.
 
+As tasks que disparam jobs Spark usam o `SparkKubernetesOperator`, que cria um
+`SparkApplication` no namespace `spark-jobs` e acompanha o driver até o fim. O
+serviço `spark` dá essa permissão ao service account `airflow-worker` pelo
+`airflow-rbac.yaml`:
+
+| Recurso             | Verbos                                       |
+| ------------------- | -------------------------------------------- |
+| `sparkapplications` | create, get, list, watch, patch, delete      |
+| `pods`, `pods/log`  | get, list, watch                             |
+
+A permissão fica no serviço `spark` porque o namespace é dele: ela nasce e some com
+o `spark-jobs`, e o `airflow` não depende do `spark` estar de pé para subir.
+
 ### Adicionando um serviço
 
 Uma pasta nova em `services/`, com `apply.sh` e `destroy.sh` executáveis. O
 `apply.sh` e o `destroy.sh` da raiz descobrem a pasta sozinhos. O `destroy.sh` do
 serviço precisa rodar sem erro mesmo quando o serviço nunca subiu.
 
+Se o serviço precisa de bucket, ele usa o módulo `modules/service-storage`: bucket,
+role com leitura e escrita nele e a associação de Pod Identity com os service
+accounts do serviço. O backend do Terraform aponta para a chave
+`services/<serviço>/terraform.tfstate`.
+
 ## Derrubar
 
 ```bash
-./infrastructure/destroy.sh
+./infrastructure/destroy.sh                  # tudo, menos o lake
+./infrastructure/destroy.sh --include-lake   # tudo, inclusive o lake
 ```
 
-Não pede confirmação. **Tudo é apagado; nada sobrevive.** Em ordem:
+Não pede confirmação. **Tudo é apagado, menos o lake de dados e o bucket de
+estado.** Em ordem:
 
 1. Roda o `destroy.sh` de todos os serviços, tenham subido ou não. Cada um apaga o
    que encontrar: releases do Helm, CRs (*Custom Resources*), NodePools (e espera as máquinas saírem),
@@ -127,7 +169,9 @@ Não pede confirmação. **Tudo é apagado; nada sobrevive.** Em ordem:
 2. Apaga o que sobrar em qualquer namespace, os NodePools restantes, e espera o
    Karpenter encerrar as máquinas.
 3. Roda o `terraform destroy` da base.
-4. Apaga os volumes EBS e snapshots com a tag `kubernetes.io/cluster/kube-system-experiment-eks`,
+4. Com `--include-lake`, roda o `terraform destroy` do lake, que apaga o bucket com
+   todo o conteúdo. Sem a flag, só avisa que o lake continua.
+5. Apaga os volumes EBS e snapshots com a tag `kubernetes.io/cluster/kube-system-experiment-eks`,
    que o driver EBS põe em tudo o que cria.
 
 No fim lista volumes soltos e snapshots que ainda existirem na conta. O que aparecer
@@ -170,9 +214,13 @@ leva de 5 a 10 minutos.
 ```
 infrastructure/
   apply.sh              base; com argumento, + os servicos citados
-  destroy.sh            todos os servicos, depois a base, depois os orfaos
+  destroy.sh            servicos, base e orfaos; --include-lake apaga o lake
   shared.tf             regiao e prefixo de nome
+  state/                cria o bucket do estado do Terraform
   cluster/              VPC, EKS, Karpenter IAM, ECR
+  data/                 lake de dados; fora do destroy padrao
+  modules/
+    service-storage/    bucket + role + Pod Identity de um servico
   configs/
     karpenter/          instala o Karpenter
     storage/            StorageClass default
@@ -192,8 +240,9 @@ infrastructure/
       destroy.sh
       namespaces.yaml
       networkpolicy.yaml
+      airflow-rbac.yaml permite ao Airflow criar SparkApplications
       nodepools/        spark, spark-gpu
-      terraform/        bucket dos event logs, Pod Identity
+      terraform/        bucket dos event logs, acesso ao lake, Pod Identity
       operator/         Spark Operator
       history-server/   Spark History Server
     kafka/

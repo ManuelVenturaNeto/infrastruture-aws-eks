@@ -7,5 +7,5 @@ variable "region" {
 variable "name_prefix" {
   description = "Prefixo aplicado ao nome de todos os recursos."
   type        = string
-  default     = "kube-system-experiment"
+  default     = "kube-system"
 }

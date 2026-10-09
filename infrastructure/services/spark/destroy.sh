@@ -3,9 +3,15 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TF_DIR="${HERE}/terraform"
+STATE_BUCKET="kube-system-experiment-tfstate"
+STATE_KEY="services/spark/terraform.tfstate"
 
 cluster_acessivel() {
   kubectl cluster-info >/dev/null 2>&1
+}
+
+state_exists() {
+  aws s3api head-object --bucket "${STATE_BUCKET}" --key "${STATE_KEY}" >/dev/null 2>&1
 }
 
 crd_instalado() {
@@ -13,7 +19,7 @@ crd_instalado() {
 }
 
 destruir_terraform() {
-  if [[ ! -f "${TF_DIR}/terraform.tfstate" ]]; then
+  if ! state_exists; then
     return
   fi
 

@@ -5,11 +5,21 @@ CLUSTER_NAME="kube-system-experiment-eks"
 REGION="us-east-1"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TF_DIR="${HERE}/cluster"
+DATA_DIR="${HERE}/data"
 SERVICES="${HERE}/services"
 TIMEOUT_DRENAGEM=3600
 
 titulo() {
   printf '\n==> %s\n' "$1"
+}
+
+usage() {
+  echo "usage: destroy.sh [--include-lake]"
+  echo
+  echo "Destroys every service and the base. The data lake and the Terraform state"
+  echo "bucket are kept."
+  echo
+  echo "  --include-lake   also destroys the data lake, with all of its content"
 }
 
 cluster_acessivel() {
@@ -86,6 +96,17 @@ destruir_infraestrutura() {
   terraform -chdir="${TF_DIR}" destroy -input=false -auto-approve
 }
 
+destroy_lake() {
+  titulo "Destroying the data lake"
+  "${DATA_DIR}/destroy.sh"
+}
+
+warn_lake_kept() {
+  titulo "Data lake kept"
+  echo "s3://kube-system-lake still holds the data."
+  echo "To destroy it as well: ${0} --include-lake"
+}
+
 apagar_orfaos() {
   local volume snapshot
   local filtro="Name=tag:kubernetes.io/cluster/${CLUSTER_NAME},Values=owned"
@@ -124,6 +145,21 @@ listar_restantes() {
   echo "O que aparecer acima nao tem a tag do cluster e nao foi apagado."
 }
 
+DESTROY_LAKE=false
+
+case "${1:-}" in
+  "") ;;
+  --include-lake) DESTROY_LAKE=true ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 1
+    ;;
+esac
+
 titulo "Destruindo o cluster ${CLUSTER_NAME} e tudo que roda nele"
 
 if cluster_acessivel; then
@@ -138,5 +174,12 @@ else
 fi
 
 destruir_infraestrutura
+
+if [[ "${DESTROY_LAKE}" == true ]]; then
+  destroy_lake
+else
+  warn_lake_kept
+fi
+
 apagar_orfaos
 listar_restantes

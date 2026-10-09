@@ -5,6 +5,8 @@ CLUSTER_NAME="kube-system-experiment-eks"
 REGION="us-east-1"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TF_DIR="${HERE}/cluster"
+STATE_DIR="${HERE}/state"
+DATA_DIR="${HERE}/data"
 CONFIGS="${HERE}/configs"
 SERVICES="${HERE}/services"
 
@@ -22,8 +24,9 @@ servicos_disponiveis() {
 uso() {
   echo "uso: apply.sh [servico ...]"
   echo
-  echo "Sem argumentos sobe apenas a base: EKS, Karpenter, StorageClass e o device"
-  echo "plugin da GPU. Com argumentos sobe a base e os servicos citados, completos."
+  echo "Without arguments, brings up only the base: state bucket, EKS, data lake,"
+  echo "Karpenter, StorageClass and the GPU device plugin. With arguments, also brings"
+  echo "up each listed service, complete."
   echo
   echo "Disponiveis:"
   servicos_disponiveis | sed 's/^/  /'
@@ -43,12 +46,22 @@ validar_servicos() {
   done
 }
 
+prepare_state() {
+  titulo "Terraform state bucket"
+  "${STATE_DIR}/apply.sh"
+}
+
 criar_infraestrutura() {
   titulo "terraform init"
   terraform -chdir="${TF_DIR}" init -input=false
 
   titulo "terraform apply"
   terraform -chdir="${TF_DIR}" apply -input=false -auto-approve
+}
+
+create_lake() {
+  titulo "Data lake"
+  "${DATA_DIR}/apply.sh"
 }
 
 gerar_kubeconfig() {
@@ -105,7 +118,9 @@ fi
 SERVICOS=("$@")
 
 validar_servicos
+prepare_state
 criar_infraestrutura
+create_lake
 gerar_kubeconfig
 instalar_plataforma
 subir_servicos

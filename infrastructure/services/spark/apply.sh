@@ -5,6 +5,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 
 kubectl apply -f "${HERE}/namespaces.yaml"
 kubectl apply -f "${HERE}/networkpolicy.yaml"
+kubectl apply -f "${HERE}/airflow-rbac.yaml"
 
 terraform -chdir="${HERE}/terraform" init -input=false
 terraform -chdir="${HERE}/terraform" apply -input=false -auto-approve

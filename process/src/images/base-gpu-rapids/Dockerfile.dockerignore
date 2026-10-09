@@ -1,0 +1,6 @@
+*
+!library/
+!process_etl/
+!process_ml/
+**/__pycache__
+**/*.md

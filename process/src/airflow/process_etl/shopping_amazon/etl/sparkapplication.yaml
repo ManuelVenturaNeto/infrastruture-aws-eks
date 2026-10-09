@@ -1,0 +1,65 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: shopping-amazon-etl
+  namespace: spark-jobs
+spec:
+  type: Python
+  mode: cluster
+  image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kube-system/spark-rapids:shopping_amazon-1.0.0
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/jobs/process_etl/shopping_amazon/etl/main.py
+  arguments:
+    - "--source"
+    - "s3a://kube-system-lake/shopping_amazon_reviews/shopping_amazon_reviews"
+    - "--target"
+    - "s3a://kube-system-lake/shopping_amazon_reviews/shopping_amazon_reviews_delta"
+  sparkVersion: 4.2.0
+
+  restartPolicy:
+    type: Never
+
+  sparkConf:
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider"
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://kube-system-spark/event-logs/"
+    "spark.executor.resource.gpu.amount": "1"
+    "spark.executor.resource.gpu.vendor": "nvidia.com"
+    "spark.executor.resource.gpu.discoveryScript": "/opt/spark/examples/src/main/scripts/getGpusResources.sh"
+    "spark.task.resource.gpu.amount": "0.5"
+    "spark.rapids.memory.pinnedPool.size": "1G"
+
+  driver:
+    cores: 1
+    memory: 2g
+    serviceAccount: spark
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    nodeSelector:
+      workload: spark
+      karpenter.sh/capacity-type: on-demand
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark
+        effect: NoSchedule
+
+  executor:
+    instances: 2
+    cores: 2
+    memory: 4g
+    memoryOverhead: 2g
+    gpu:
+      name: nvidia.com/gpu
+      quantity: 1
+    nodeSelector:
+      workload: spark-gpu
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: spark-gpu
+        effect: NoSchedule
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule

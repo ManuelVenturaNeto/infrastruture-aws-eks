@@ -18,4 +18,12 @@ RUN cd /opt/spark/jars \
 
 RUN pip3 install --no-cache-dir --no-deps "delta-spark==${DELTA_VERSION}"
 
+ARG JOB
+RUN test -n "${JOB}"
+
+COPY library /opt/spark/jobs/library
+COPY ${JOB} /opt/spark/jobs/${JOB}
+
+ENV PYTHONPATH=/opt/spark/jobs
+
 USER spark

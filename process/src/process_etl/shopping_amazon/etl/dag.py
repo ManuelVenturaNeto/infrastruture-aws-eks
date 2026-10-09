@@ -1,11 +1,9 @@
-from pathlib import Path
-
 from library.process import Dag
 
 from . import steps
 
 
-def build_dag(source: Path, target: Path) -> Dag:
+def build_dag(source: str, target: str) -> Dag:
     """
     Builds the extract DAG: reads the raw parquet, writes it as Delta and reads the Delta table back.
     """

@@ -101,8 +101,22 @@ aws login
 
 ### Pelo Airflow
 
-As DAGs (*Directed Acyclic Graphs*) ficam em `process/src/airflow/` e chegam ao
-Airflow a cada push na `main`.
+As DAGs (*Directed Acyclic Graphs*) ficam em `process/src/airflow/`, na mesma
+hierarquia de `process/src/`, e chegam ao Airflow a cada push na `main`. Cada job
+tem ali a DAG e o seu `sparkapplication.yaml`.
+
+A imagem leva só o job do `--build-arg JOB`:
+
+```bash
+IMAGE=${REGISTRY}/kube-system/spark-rapids:shopping_amazon-1.0.0
+docker build --platform linux/amd64 \
+  --file process/src/images/base-gpu-rapids/Dockerfile \
+  --build-arg JOB=process_etl/shopping_amazon \
+  --tag "${IMAGE}" process/src
+docker push "${IMAGE}"
+```
+
+No yaml, troque `ACCOUNT_ID` pela sua conta antes do push na `main`.
 
 ## Estrutura
 

@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from delta import DeltaTable
 from library.process import Step
 from pyspark.sql import DataFrame, Window
@@ -7,12 +5,12 @@ from pyspark.sql import functions as F
 
 
 class ReadParquet(Step):
-    def __init__(self, *, source: Path) -> None:
+    def __init__(self, *, source: str) -> None:
         super().__init__()
         self.source = source
 
     def run(self, df: DataFrame) -> DataFrame:
-        return self.spark.read.parquet(str(self.source))
+        return self.spark.read.parquet(self.source)
 
 
 class DistinctSelect(Step):
@@ -46,16 +44,16 @@ class UniqueID(Step):
 
 
 class WriteDelta(Step):
-    def __init__(self, *, target: Path) -> None:
+    def __init__(self, *, target: str) -> None:
         super().__init__()
         self.target = target
 
     def run(self, df: DataFrame) -> DataFrame:
-        if not DeltaTable.isDeltaTable(self.spark, str(self.target)):
+        if not DeltaTable.isDeltaTable(self.spark, self.target):
             (
                 df.write.format("delta")
                 .partitionBy("year_month")
                 .mode("overwrite")
-                .save(str(self.target))
+                .save(self.target)
             )
         return df

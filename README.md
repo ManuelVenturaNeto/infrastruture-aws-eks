@@ -13,6 +13,14 @@ uv run python process/src/data_generator/generate.py shopping
 uv run python process/src/data_generator/generate.py --help
 ```
 
+Para os jobs no cluster, envie os dados para o lake. O lake espelha
+`process/src/datasets/`, e o `sync` só manda o que mudou:
+
+```bash
+uv run python process/src/data_generator/generate.py shopping_amazon_reviews
+aws s3 sync process/src/datasets/ s3://kube-system-lake/
+```
+
 ### 2. Testar local
 
 ```bash

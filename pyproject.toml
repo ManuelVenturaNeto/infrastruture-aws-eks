@@ -14,6 +14,7 @@ dependencies = [
     "matplotlib>=3.11.2",
     "nbstripout>=0.9.1",
     "pandas>=3.0.5",
+    "pendulum>=3.2.0",
     "pre-commit>=4.6.2",
     "pyarrow>=25.0.1",
     "pyspark>=4.2.0",
@@ -38,3 +39,9 @@ packages = [
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "apache-airflow==3.2.2",
+    "apache-airflow-providers-cncf-kubernetes>=10",
+]

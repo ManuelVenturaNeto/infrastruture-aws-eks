@@ -1,3 +1,16 @@
+data "aws_caller_identity" "current" {}
+
+resource "kubernetes_config_map_v1" "spark" {
+  metadata {
+    name      = "airflow-spark"
+    namespace = local.namespace
+  }
+
+  data = {
+    ECR_REGISTRY = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
+  }
+}
+
 resource "random_password" "api_secret_key" {
   length  = 32
   special = false

@@ -25,7 +25,7 @@ postgresql:
 dags:
   gitSync:
     enabled: true
-    repo: https://github.com/ManuelVenturaNeto/infrastruture-aws-eks.git
+    repo: https://github.com/ManuelVenturaNeto/k8s.git
     branch: main
     subPath: process/src/airflow
     period: 30s
@@ -49,6 +49,10 @@ statsd:
 env:
   - name: AIRFLOW_CONN_AWS_DEFAULT
     value: aws://
+
+extraEnvFrom: |
+  - configMapRef:
+      name: airflow-spark
 
 config:
   core:

@@ -149,7 +149,7 @@ lake. O lake sobrevive ao `destroy.sh` da raiz; só é apagado com `--include-la
 
 O Airflow lê as DAGs por git-sync: um sidecar em cada pod puxa a pasta
 `process/src/airflow` da branch `main` de
-`github.com/ManuelVenturaNeto/infrastruture-aws-eks` a cada 30 s. Commit e push na
+`github.com/ManuelVenturaNeto/k8s` a cada 30 s. Commit e push na
 `main` basta; não há rebuild nem redeploy.
 
 As tasks que disparam jobs Spark usam o `SparkKubernetesOperator`, que cria um

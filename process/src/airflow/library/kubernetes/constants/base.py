@@ -23,14 +23,9 @@ BASE = Profile(
             },
             "driver": {
                 **CODE,
-                "cores": 1,
-                "memory": "2g",
                 "serviceAccount": "spark",
                 "annotations": {"karpenter.sh/do-not-disrupt": "true"},
-                "nodeSelector": {
-                    "workload": "spark",
-                    "karpenter.sh/capacity-type": "on-demand",
-                },
+                "nodeSelector": {"workload": "spark"},
                 "tolerations": [tolerations.SPARK],
             },
             "executor": CODE,

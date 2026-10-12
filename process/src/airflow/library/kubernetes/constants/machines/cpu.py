@@ -5,10 +5,7 @@ CPU = Profile(
     manifest={
         "spec": {
             "executor": {
-                "nodeSelector": {
-                    "workload": "spark",
-                    "karpenter.sh/capacity-type": "spot",
-                },
+                "nodeSelector": {"workload": "spark"},
                 "tolerations": [tolerations.SPARK],
             }
         }

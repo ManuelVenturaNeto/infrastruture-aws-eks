@@ -30,6 +30,15 @@ class Cpu(Enum):
         self.memory = memory
 
 
+class Criticality(Enum):
+    NORMAL = "spot"
+    CRITICAL = "on-demand"
+
+    @property
+    def capacity_type(self) -> str:
+        return self.value
+
+
 class Gpu(Enum):
     SMALL = 4
     MEDIUM = 8

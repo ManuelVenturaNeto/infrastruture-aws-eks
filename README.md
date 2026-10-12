@@ -8,7 +8,7 @@ S3 (*Simple Storage Service*).
 ```mermaid
 flowchart TB
   G[data_generator] e1@-->|aws s3 sync| L[(Lake S3)]
-  L e2@--> J[Job Spark<br/>Dag de Steps]
+  L e2@--> J[Job Spark<br/>Pipeline de Steps]
   J e3@-->|Delta| L
   J e4@-.->|local| U[uv run]
   J e5@-.->|cluster| K[SparkApplication<br/>Spark Operator]
@@ -42,8 +42,12 @@ Sem AWS.
 ```bash
 uv sync
 uv run python process/src/data_generator/generate.py stocks_b3 --start_year 2020 --end_year 2024
-uv run python -m process_etl.stocks_b3.main
+uv run python process/src/airflow/run.py data_eng/stocks_b3/etl/main.py
 ```
+
+O `run.py` recebe o mesmo caminho do `mainApplicationFile` e repassa o resto
+dos argumentos ao job. Com GPU local, exporte `SPARK_GPU=true` antes; no
+cluster, quem define essa variável é o `Gpu` da DAG.
 
 ## Pipelines
 
@@ -52,8 +56,6 @@ uv run python -m process_etl.stocks_b3.main
 | `shopping_amazon`     | deduplica `shopping_amazon_reviews` e   | GPU     |
 |                       | grava Delta por mês                     |         |
 | `stocks_b3`           | indicadores técnicos das ações da B3    | CPU     |
-| `xgboost_shopping`    | treina XGBoost para atraso de entrega   | CPU/GPU |
-| `spark_pipe_shopping` | legado: lê `shopping` e mostra o schema | CPU/GPU |
 
 CPU é *Central Processing Unit*; B3 é *Brasil, Bolsa, Balcão*. Datasets no
 [README do data_generator](process/src/data_generator/README.md).
@@ -72,75 +74,102 @@ aws login
    aws s3 sync process/src/datasets/ s3://kube-system-lake/
    ```
 
-2. Imagem no ECR (*Elastic Container Registry*). A tag é imutável: código novo,
-   tag nova.
+2. Imagens de runtime no ECR (*Elastic Container Registry*). Só têm Spark,
+   Delta, S3 e RAPIDS; o código chega pelo git-sync. A tag é imutável: runtime
+   novo, tag nova.
 
    ```bash
    REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
-   IMAGE=${REGISTRY}/kube-system/spark:1.0.0
 
    aws ecr get-login-password --region us-east-1 \
      | docker login --username AWS --password-stdin "${REGISTRY}"
 
    docker build --platform linux/amd64 \
-     --file process/src/process_etl/spark_pipe_shopping/images/cpu/Dockerfile \
-     --tag "${IMAGE}" process/src
-
-   docker push "${IMAGE}"
+     --file process/src/images/base-cpu/Dockerfile \
+     --tag "${REGISTRY}/kube-system/spark:4.2.0" process/src/images
+   docker build --platform linux/amd64 \
+     --file process/src/images/base-gpu-rapids/Dockerfile \
+     --tag "${REGISTRY}/kube-system/spark-rapids:4.2.0-26.08.1" process/src/images
+   docker push "${REGISTRY}/kube-system/spark:4.2.0"
+   docker push "${REGISTRY}/kube-system/spark-rapids:4.2.0-26.08.1"
    ```
 
-3. Disparar, depois de trocar `ACCOUNT_ID` no yaml:
+3. Dispare a DAG pela UI do Airflow e acompanhe. O registry chega ao Airflow
+   pela variável `ECR_REGISTRY`, que o Terraform do Airflow preenche com a
+   conta do `aws login`:
 
    ```bash
-   kubectl apply -f process/src/process_etl/spark_pipe_shopping/sparkapplication.yaml
-   kubectl logs -n spark-jobs shopping-etl-driver -f
+   kubectl get sparkapplication -n spark-jobs
+   kubectl logs -n spark-jobs <sparkapplication>-driver -f
    ```
-
-   Para rodar de novo, apague antes:
-   `kubectl delete sparkapplication shopping-etl -n spark-jobs`.
 
 ### Pelo Airflow
 
-As DAGs (*Directed Acyclic Graphs*) ficam em `process/src/airflow/`, na mesma
-hierarquia de `process/src/`, e chegam ao Airflow a cada push na `main`. Cada job
-tem ali a DAG e o seu `sparkapplication.yaml`.
+As DAGs (*Directed Acyclic Graphs*) ficam ao lado de cada job em
+`process/src/airflow/` e chegam ao Airflow a cada push na `main`. Cada task
+vem de `spark_job()` de `library/kubernetes/`, que recebe `task_id`, `job` (o
+pacote do `main.py`), `sources`, `targets` e três enums, `cpu`, `gpu` e
+`instances`:
 
-A imagem leva só o job do `--build-arg JOB`:
+- o `dag_id` é o nome do dataset; cada item de `sources` e `targets` vira o
+  argumento `--{nome} s3a://kube-system-lake/{dag_id}/{tabela}` do job;
+- a SparkApplication se chama `{dag_id}-{task_id}`;
+- sem os enums, cai em `Cpu.MEDIUM`, `Gpu.NONE` e `Instances.SMALL`.
 
-```bash
-IMAGE=${REGISTRY}/kube-system/spark-rapids:shopping_amazon-1.0.0
-docker build --platform linux/amd64 \
-  --file process/src/images/base-gpu-rapids/Dockerfile \
-  --build-arg JOB=process_etl/shopping_amazon \
-  --tag "${IMAGE}" process/src
-docker push "${IMAGE}"
-```
+| `Cpu`    | Executor        |
+| -------- | --------------- |
+| `SMALL`  | 1 core, 2g      |
+| `MEDIUM` | 2 cores, 4g     |
+| `LARGE`  | 4 cores, 8g     |
+| `XLARGE` | 8 cores, 16g    |
 
-No yaml, troque `ACCOUNT_ID` pela sua conta antes do push na `main`.
+| `Gpu`    | Memória mínima da GPU | Imagem         |
+| -------- | --------------------- | -------------- |
+| `NONE`   | sem GPU               | `spark`        |
+| `SMALL`  | 4 GB                  | `spark-rapids` |
+| `MEDIUM` | 8 GB                  | `spark-rapids` |
+| `LARGE`  | 16 GB                 | `spark-rapids` |
+| `XLARGE` | 32 GB                 | `spark-rapids` |
+
+Com GPU, cada executor recebe uma GPU inteira, e o Karpenter escolhe a
+instância mais barata do NodePool `spark-gpu` com pelo menos essa memória. A
+folga de memória do executor é 40% do `Cpu`, e o *pinned pool* do RAPIDS fica
+com metade dela.
+
+| `Instances` | Executors (*dynamic allocation*) |
+| ----------- | -------------------------------- |
+| `SINGLE`    | 1                                |
+| `SMALL`     | 2 a 4                            |
+| `MEDIUM`    | 4 a 8                            |
+| `LARGE`     | 8 a 16                           |
+| `XLARGE`    | 16 a 32                          |
+
+O código não vai na imagem: um initContainer git-sync clona a `main` no pod,
+como o Airflow faz com as DAGs. Push na `main` atualiza DAG e job juntos.
 
 ## Estrutura
 
-| Pasta                         | O que tem                                |
-| ----------------------------- | ---------------------------------------- |
-| `process/src/library/`        | `Dag`, `Step` e `build_spark`            |
-| `process/src/process_etl/`    | jobs de ETL (*Extract, Transform, Load*) |
-| `process/src/process_ml/`     | treino de modelos                        |
-| `process/src/data_generator/` | download dos datasets                    |
-| `process/src/images/`         | imagens Spark com Delta, S3 e RAPIDS     |
-| `process/src/airflow/`        | DAGs do Airflow                          |
-| `infrastructure/`             | EKS, Karpenter, lake e serviços          |
+| Pasta                           | O que tem                               |
+| ------------------------------- | --------------------------------------- |
+| `process/src/airflow/`          | pasta de DAGs do Airflow e raiz de      |
+|                                 | import dos jobs; `run.py` roda local    |
+| `process/src/airflow/library/`  | `Pipeline`, `Step`, `build_spark` e o   |
+|                                 | template da SparkApplication            |
+| `process/src/airflow/data_eng/` | jobs de ETL (*Extract, Transform,       |
+|                                 | Load*) e suas DAGs                      |
+| `process/src/airflow/data_sci/` | treino de modelos                       |
+| `process/src/data_generator/`   | download dos datasets                   |
+| `process/src/images/`           | imagens Spark com Delta, S3 e RAPIDS    |
+| `infrastructure/`               | EKS, Karpenter, lake e serviços         |
 
 ## GPU
 
-| Imagem         | Dockerfile                    | O que acelera          |
-| -------------- | ----------------------------- | ---------------------- |
-| `spark-rapids` | `images/base-gpu-rapids`      | Spark SQL inteiro, sem |
-|                |                               | mudar código           |
-| `spark-gpu`    | `xgboost_shopping/images/gpu` | só o XGBoost, com      |
-|                |                               | `device="cuda"`        |
+| Imagem         | Dockerfile               | O que acelera                    |
+| -------------- | ------------------------ | -------------------------------- |
+| `spark-rapids` | `images/base-gpu-rapids` | Spark SQL inteiro, sem mudar     |
+|                |                          | código                           |
 
-Imagem de CPU no NodePool `spark-gpu` roda sem erro, mas a GPU fica parada.
-Confira:
+Para conferir se o RAPIDS está ativo nos executors:
 
 ```bash
 kubectl logs -n spark-jobs <job>-exec-1 | grep -i "rapids\|cuda\|gpu"

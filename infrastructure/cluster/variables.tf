@@ -31,5 +31,5 @@ variable "system_instance_types" {
 variable "image_repositories" {
   description = "Repositorios ECR criados para as imagens de workload."
   type        = list(string)
-  default     = ["spark", "spark-gpu", "spark-rapids"]
+  default     = ["spark", "spark-rapids"]
 }

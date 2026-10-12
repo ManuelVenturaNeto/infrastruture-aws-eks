@@ -32,7 +32,7 @@ def spark_job(
     sources: dict[str, str],
     targets: dict[str, str],
     cpu: Cpu = Cpu.MEDIUM,
-    gpu: Gpu = Gpu.NONE,
+    gpu: Gpu | None = None,
     instances: Instances = Instances.SMALL,
 ) -> SparkKubernetesOperator:
     """Builds the task that submits a job as a SparkApplication.
@@ -45,8 +45,8 @@ def spark_job(
             each entry becomes --name <lake>/<dag_id>/<table>.
         targets: Job argument name to output table, passed the same way.
         cpu: Cores and memory of each executor.
-        gpu: Minimum GPU memory of each executor's node; anything but NONE
-            also picks the RAPIDS image.
+        gpu: Minimum GPU memory of each executor's node, which also picks
+            the RAPIDS image; None runs on CPU only.
         instances: Executor range for dynamic allocation.
 
     Returns:
@@ -56,7 +56,7 @@ def spark_job(
 
     overhead = int(cpu.memory * 1024 * OVERHEAD_FACTOR)
 
-    if gpu is not Gpu.NONE:
+    if gpu is not None:
         selected.append(GPU)
         selected.append(
             Profile(

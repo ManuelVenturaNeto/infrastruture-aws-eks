@@ -1,6 +1,6 @@
 import pendulum
 from airflow.sdk import DAG
-from library.kubernetes import Cpu, Gpu, spark_job
+from library.kubernetes import Cpu, spark_job
 
 from data_eng.shopping_amazon import etl
 
@@ -17,5 +17,5 @@ with DAG(
         sources={"source": "shopping_amazon_reviews"},
         targets={"target": "shopping_amazon_reviews_delta"},
         cpu=Cpu.LARGE,
-        gpu=Gpu.LARGE,
+        gpu=None,
     )

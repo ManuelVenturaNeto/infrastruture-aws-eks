@@ -31,7 +31,6 @@ class Cpu(Enum):
 
 
 class Gpu(Enum):
-    NONE = 0
     SMALL = 4
     MEDIUM = 8
     LARGE = 16

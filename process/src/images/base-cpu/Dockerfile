@@ -5,6 +5,8 @@ ARG DELTA_ARTIFACT=delta-spark_4.2_2.13
 ARG DELTA_VERSION=4.4.0
 ARG HADOOP_VERSION=3.5.0
 ARG AWS_SDK_VERSION=2.35.4
+ARG PYARROW_VERSION=25.0.1
+ARG BOTO3_VERSION=1.43.80
 
 USER root
 
@@ -14,6 +16,7 @@ RUN cd /opt/spark/jars \
  && curl -fsSLO "${MAVEN}/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar" \
  && curl -fsSLO "${MAVEN}/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar"
 
-RUN pip3 install --no-cache-dir --no-deps "delta-spark==${DELTA_VERSION}"
+RUN pip3 install --no-cache-dir --no-deps "delta-spark==${DELTA_VERSION}" \
+ && pip3 install --no-cache-dir "pyarrow==${PYARROW_VERSION}" "boto3==${BOTO3_VERSION}"
 
 USER spark

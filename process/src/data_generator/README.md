@@ -27,6 +27,10 @@ uv run python process/src/data_generator/generate.py <dataset>
 Para começar, use um dos pequenos. O `stocks_b3` aceita `--start_year` e
 `--end_year` para baixar só alguns anos. O detalhe de cada dataset vem abaixo.
 
+Cada dataset é uma pasta em `extraction/` com uma função `ingest`; o nome da
+pasta é o nome no comando. O que mais de um processo usa (download, conversão
+para parquet, ANS) fica em `utils/`.
+
 ## shopping
 
 ```bash

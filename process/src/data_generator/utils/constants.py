@@ -1,0 +1,4 @@
+HEADERS = {"User-Agent": "Mozilla/5.0"}
+ATTEMPTS = 3
+NOT_FOUND = 404
+TIMEOUT = 300

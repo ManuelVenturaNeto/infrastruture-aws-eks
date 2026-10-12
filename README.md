@@ -41,24 +41,14 @@ Sem AWS.
 
 ```bash
 uv sync
-uv run python process/src/data_generator/generate.py stocks_b3 --start_year 2020 --end_year 2024
-uv run python process/src/airflow/run.py data_eng/stocks_b3/etl/main.py
+uv run python process/src/data_generator/generate.py <dataset>
+uv run python process/src/airflow/run.py data_eng/<processo>/etl/main.py
 ```
 
+Datasets no [README do data_generator](process/src/data_generator/README.md).
 O `run.py` recebe o mesmo caminho do `mainApplicationFile` e repassa o resto
 dos argumentos ao job. Com GPU local, exporte `SPARK_GPU=true` antes; no
 cluster, quem define essa variável é o `Gpu` da DAG.
-
-## Pipelines
-
-| Job                   | O que faz                               | Roda em |
-| --------------------- | --------------------------------------- | ------- |
-| `shopping_amazon`     | deduplica `shopping_amazon_reviews` e   | GPU     |
-|                       | grava Delta por mês                     |         |
-| `stocks_b3`           | indicadores técnicos das ações da B3    | CPU     |
-
-CPU é *Central Processing Unit*; B3 é *Brasil, Bolsa, Balcão*. Datasets no
-[README do data_generator](process/src/data_generator/README.md).
 
 ## Rodar no cluster
 
@@ -114,7 +104,7 @@ pacote do `main.py`), `sources`, `targets` e três enums, `cpu`, `gpu` e
 - o `dag_id` é o nome do dataset; cada item de `sources` e `targets` vira o
   argumento `--{nome} s3a://kube-system-lake/{dag_id}/{tabela}` do job;
 - a SparkApplication se chama `{dag_id}-{task_id}`;
-- sem os enums, cai em `Cpu.MEDIUM`, `Gpu.NONE` e `Instances.SMALL`.
+- sem os enums, cai em `Cpu.MEDIUM`, sem GPU e `Instances.SMALL`.
 
 | `Cpu`    | Executor        |
 | -------- | --------------- |
@@ -125,7 +115,7 @@ pacote do `main.py`), `sources`, `targets` e três enums, `cpu`, `gpu` e
 
 | `Gpu`    | Memória mínima da GPU | Imagem         |
 | -------- | --------------------- | -------------- |
-| `NONE`   | sem GPU               | `spark`        |
+| `None`   | sem GPU               | `spark`        |
 | `SMALL`  | 4 GB                  | `spark-rapids` |
 | `MEDIUM` | 8 GB                  | `spark-rapids` |
 | `LARGE`  | 16 GB                 | `spark-rapids` |
@@ -184,7 +174,8 @@ kubectl describe pod -n spark-jobs <pod>
 | Sintoma                         | Causa provável                            |
 | ------------------------------- | ----------------------------------------- |
 | `untolerated taint`             | Falta a toleration no manifesto           |
-| `Pending` por mais de 5 min     | Limite de CPU do NodePool ou sem spot     |
+| `Pending` por mais de 5 min     | Limite de CPU (*Central Processing        |
+|                                 | Unit*) do NodePool ou sem spot            |
 | `pods is forbidden`             | `serviceAccount` diferente de `spark`     |
 | `ImagePullBackOff`              | Tag inexistente no ECR                    |
 | `exec format error`             | Imagem ARM: build sem `--platform`        |

@@ -1,0 +1,22 @@
+from delta.tables import DeltaTable
+from library.process import Step
+from pyspark.sql import DataFrame
+from pyspark.sql import functions as F
+
+
+class WriteDelta(Step):
+    def __init__(self, target: str) -> None:
+
+        self.target = target
+
+    def run(self, df: DataFrame) -> DataFrame:
+
+        if not DeltaTable.isDeltaTable(self.spark, self.target):
+            (
+                df.withColumn("year", F.year("trade_date"))
+                .write.format("delta")
+                .partitionBy("year")
+                .mode("overwrite")
+                .save(self.target)
+            )
+        return df

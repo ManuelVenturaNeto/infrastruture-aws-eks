@@ -29,12 +29,15 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+dev-mode-dirs = ["process/src", "process/src/airflow"]
+
 [tool.hatch.build.targets.wheel]
 packages = [
     "process/src/data_generator",
-    "process/src/library",
-    "process/src/process_etl",
-    "process/src/process_ml",
+    "process/src/airflow/library",
+    "process/src/airflow/data_eng",
+    "process/src/airflow/data_sci",
 ]
 
 [tool.uv]

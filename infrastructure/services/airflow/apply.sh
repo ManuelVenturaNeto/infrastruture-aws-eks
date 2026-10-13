@@ -15,6 +15,7 @@ helm upgrade --install airflow airflow \
   --repo https://airflow.apache.org \
   --namespace airflow \
   --values "${HERE}/helm-values.yaml" \
+  --force-conflicts \
   --timeout 20m \
   --wait
 

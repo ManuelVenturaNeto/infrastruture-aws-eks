@@ -116,7 +116,9 @@ modo sem ZooKeeper.
 | `mlflow`  | MLflow com artefatos servidos pelo  | RDS Postgres + bucket S3   |
 |           | servidor                            | dos artefatos              |
 | `spark`   | Spark Operator, NodePools `spark` e | bucket S3 dos event logs   |
-|           | `spark-gpu`, Spark History Server,  |                            |
+|           | `spark-gpu` (jobs em spot;          |                            |
+|           | on-demand só se `CRITICAL`), Spark  |                            |
+|           | History Server on-demand,           |                            |
 |           | build e push das imagens que faltam |                            |
 |           | no ECR                              |                            |
 | `kafka`   | Strimzi, 3 brokers KRaft, kafka-ui, | volumes EBS dos brokers    |
@@ -261,8 +263,8 @@ Cada serviço soma enquanto estiver de pé:
 | --------- | ------------------------------------------------ | --------- |
 | `airflow` | 1 máquina on-demand de 2–4 vCPU + RDS t4g.micro  | 0,12–0,21 |
 | `mlflow`  | 1 máquina on-demand de 2 vCPU + RDS t4g.micro    | 0,12      |
-| `spark`   | 1 máquina spot para o History Server, mais os    | 0,03 +    |
-|           | jobs                                             | jobs      |
+| `spark`   | 1 máquina on-demand de 2 vCPU para o History     | 0,08 +    |
+|           | Server, mais os jobs                             | jobs      |
 | `kafka`   | 1 máquina on-demand de 4–8 vCPU + 3 volumes gp3  | 0,20–0,40 |
 
 Valores de tabela em `us-east-1`, para ordem de grandeza. Criar ou destruir um RDS

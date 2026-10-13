@@ -11,10 +11,10 @@ flowchart TB
   O[Spark Operator] e2@--> S
   S e3@--> D[Driver]
   D e4@--> E[Executors]
-  E e5@-->|roda em| N[NodePools spark e<br/>spark-gpu, spot ou on-demand]
+  E e5@-->|roda em| N[NodePools spark e spark-gpu<br/>spot; on-demand só se CRITICAL]
   E e6@-->|Pod Identity| L[(Lake<br/>kube-system-lake)]
   D e7@-->|event logs| B[(S3<br/>kube-system-spark)]
-  H[History Server] e8@--> B
+  H[History Server<br/>on-demand] e8@--> B
   U[UI: port-forward 18080] e9@--> H
 
   e1@{ animate: true }

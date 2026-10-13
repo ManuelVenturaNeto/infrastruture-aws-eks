@@ -7,7 +7,7 @@ S3 (*Simple Storage Service*).
 
 ```mermaid
 flowchart TB
-  G[data_generator] e1@-->|aws s3 sync| L[(Lake S3)]
+  G[data_generator] e1@-->|DAG ou aws s3 sync| L[(Lake S3)]
   L e2@--> J[Job Spark<br/>Pipeline de Steps]
   J e3@-->|Delta| L
   J e4@-.->|local| U[uv run]
@@ -41,11 +41,12 @@ Sem AWS.
 
 ```bash
 uv sync
-uv run python process/src/data_generator/generate.py <dataset>
+uv run python process/src/airflow/run.py data_generator/main.py <dataset>
 uv run python process/src/airflow/run.py data_eng/<processo>/etl/main.py
 ```
 
-Datasets no [README do data_generator](process/src/data_generator/README.md).
+Datasets no
+[README do data_generator](process/src/airflow/data_generator/README.md).
 O `run.py` recebe o mesmo caminho do `mainApplicationFile` e repassa o resto
 dos argumentos ao job. Com GPU local, exporte `SPARK_GPU=true` antes; no
 cluster, quem define essa variável é o `Gpu` da DAG.
@@ -58,15 +59,9 @@ Com a [infraestrutura](infrastructure/README.md) de pé:
 aws login
 ```
 
-1. Dados no lake (espelha `process/src/datasets/`):
-
-   ```bash
-   aws s3 sync process/src/datasets/ s3://kube-system-lake/
-   ```
-
-2. Imagens de runtime no ECR (*Elastic Container Registry*). Só têm Spark,
-   Delta, S3 e RAPIDS; o código chega pelo git-sync. A tag é imutável: runtime
-   novo, tag nova.
+1. Imagens de runtime no ECR (*Elastic Container Registry*). Só têm Spark,
+   Delta, S3, RAPIDS, pyarrow e boto3; o código chega pelo git-sync. A tag é
+   imutável: runtime novo, tag nova.
 
    ```bash
    REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
@@ -82,6 +77,13 @@ aws login
      --tag "${REGISTRY}/kube-system/spark-rapids:4.2.0-26.08.1" process/src/images
    docker push "${REGISTRY}/kube-system/spark:4.2.0"
    docker push "${REGISTRY}/kube-system/spark-rapids:4.2.0-26.08.1"
+   ```
+
+2. Dados no lake: dispare a DAG `data_generator` com o `dataset` desejado ou
+   `all`, ou espelhe o que já está em `process/src/datasets/`:
+
+   ```bash
+   aws s3 sync process/src/datasets/ s3://kube-system-lake/
    ```
 
 3. Dispare a DAG pela UI do Airflow e acompanhe. O registry chega ao Airflow
@@ -104,7 +106,11 @@ pacote do `main.py`), `sources`, `targets` e três enums, `cpu`, `gpu` e
 - o `dag_id` é o nome do dataset; cada item de `sources` e `targets` vira o
   argumento `--{nome} s3a://kube-system-lake/{dag_id}/{tabela}` do job;
 - a SparkApplication se chama `{dag_id}-{task_id}`;
-- sem os enums, cai em `Cpu.MEDIUM`, sem GPU e `Instances.SMALL`.
+- sem os enums, cai em `Cpu.MEDIUM`, sem GPU e `Instances.SMALL`;
+- `arguments` vai antes de `sources` e `targets`; `driver` (`Cpu.SMALL`) dá o
+  tamanho do driver;
+- `criticality` escolhe a capacidade de driver e executors: `NORMAL` (padrão)
+  usa spot e `CRITICAL` usa on-demand.
 
 | `Cpu`    | Executor        |
 | -------- | --------------- |
@@ -139,18 +145,19 @@ como o Airflow faz com as DAGs. Push na `main` atualiza DAG e job juntos.
 
 ## Estrutura
 
-| Pasta                           | O que tem                               |
-| ------------------------------- | --------------------------------------- |
-| `process/src/airflow/`          | pasta de DAGs do Airflow e raiz de      |
-|                                 | import dos jobs; `run.py` roda local    |
-| `process/src/airflow/library/`  | `Pipeline`, `Step`, `build_spark` e o   |
-|                                 | template da SparkApplication            |
-| `process/src/airflow/data_eng/` | jobs de ETL (*Extract, Transform,       |
-|                                 | Load*) e suas DAGs                      |
-| `process/src/airflow/data_sci/` | treino de modelos                       |
-| `process/src/data_generator/`   | download dos datasets                   |
-| `process/src/images/`           | imagens Spark com Delta, S3 e RAPIDS    |
-| `infrastructure/`               | EKS, Karpenter, lake e serviços         |
+| Pasta                                 | O que tem                          |
+| ------------------------------------- | ---------------------------------- |
+| `process/src/airflow/`                | pasta de DAGs do Airflow e raiz de |
+|                                       | import; `run.py` roda local        |
+| `process/src/airflow/library/`        | `Pipeline`, `Step`, `build_spark`  |
+|                                       | e o `spark_job`                    |
+| `process/src/airflow/data_generator/` | download dos datasets e sua DAG    |
+| `process/src/airflow/data_eng/`       | jobs de ETL (*Extract, Transform,  |
+|                                       | Load*) e suas DAGs                 |
+| `process/src/airflow/data_sci/`       | treino de modelos                  |
+| `process/src/images/`                 | imagens Spark com Delta, S3 e      |
+|                                       | RAPIDS                             |
+| `infrastructure/`                     | EKS, Karpenter, lake e serviços    |
 
 ## GPU
 

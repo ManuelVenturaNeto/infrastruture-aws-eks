@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "boto3>=1.43.80",
     "dask-ml>=2025.1.0",
     "delta-spark>=4.4.0",
     "keras>=3.15.1",
@@ -30,15 +31,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-dev-mode-dirs = ["process/src", "process/src/airflow"]
+dev-mode-dirs = ["process/src/airflow"]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "process/src/data_generator",
     "process/src/airflow/library",
+    "process/src/airflow/data_generator",
     "process/src/airflow/data_eng",
     "process/src/airflow/data_sci",
 ]
+
+[tool.ruff.per-file-target-version]
+"process/src/airflow/**/*.py" = "py310"
 
 [tool.uv]
 package = true

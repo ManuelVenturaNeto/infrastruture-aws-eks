@@ -5,7 +5,7 @@ Comandos a partir da raiz do repo.
 ## Local
 
 ```bash
-uv run python process/src/data_generator/generate.py shopping_amazon_reviews
+uv run python process/src/airflow/run.py data_generator/main.py shopping_amazon_reviews
 uv run python process/src/airflow/run.py data_eng/shopping_amazon/etl/main.py
 ```
 

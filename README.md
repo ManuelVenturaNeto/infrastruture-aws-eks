@@ -59,25 +59,10 @@ Com a [infraestrutura](infrastructure/README.md) de pé:
 aws login
 ```
 
-1. Imagens de runtime no ECR (*Elastic Container Registry*). Só têm Spark,
-   Delta, S3, RAPIDS, pyarrow e boto3; o código chega pelo git-sync. A tag é
-   imutável: runtime novo, tag nova.
-
-   ```bash
-   REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
-
-   aws ecr get-login-password --region us-east-1 \
-     | docker login --username AWS --password-stdin "${REGISTRY}"
-
-   docker build --platform linux/amd64 \
-     --file process/src/images/base-cpu/Dockerfile \
-     --tag "${REGISTRY}/kube-system/spark:4.2.0" process/src/images
-   docker build --platform linux/amd64 \
-     --file process/src/images/base-gpu-rapids/Dockerfile \
-     --tag "${REGISTRY}/kube-system/spark-rapids:4.2.0-26.08.1" process/src/images
-   docker push "${REGISTRY}/kube-system/spark:4.2.0"
-   docker push "${REGISTRY}/kube-system/spark-rapids:4.2.0-26.08.1"
-   ```
+1. Imagens de runtime no ECR (*Elastic Container Registry*): o
+   `./infrastructure/apply.sh spark` faz o build e o push das que faltam. Só
+   têm Spark, Delta, S3, RAPIDS, pyarrow e boto3; o código chega pelo git-sync.
+   A tag é imutável: runtime novo, tag nova.
 
 2. Dados no lake: dispare a DAG `data_generator` com o `dataset` desejado ou
    `all`, ou espelhe o que já está em `process/src/datasets/`:

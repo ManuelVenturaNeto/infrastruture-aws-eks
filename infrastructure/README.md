@@ -5,6 +5,35 @@ pronto para rodar os jobs Spark: Karpenter criando máquinas spot e GPU (*Graphi
 Processing Unit*) sob demanda, lake de dados no S3 (*Simple Storage Service*) e os
 serviços que você escolher.
 
+```mermaid
+flowchart TB
+  S[apply.sh] e1@--> T[(Estado<br/>kube-system-tfstate)]
+  S e2@--> C[EKS e VPC<br/>node group system]
+  S e3@--> L[(Lake<br/>kube-system-lake)]
+  C e4@--> K[Karpenter]
+  S e5@-->|serviços escolhidos| V[airflow, spark<br/>mlflow, kafka]
+  V e6@-->|NodePool por serviço| K
+  K e7@--> N[EC2 spot,<br/>on-demand e GPU]
+  V e8@-->|Pod Identity| B[(Buckets e RDS<br/>de cada serviço)]
+
+  e1@{ animate: true }
+  e2@{ animate: true }
+  e3@{ animate: true }
+  e4@{ animate: true }
+  e5@{ animate: true }
+  e6@{ animate: true }
+  e7@{ animate: true }
+  e8@{ animate: true }
+
+  classDef data fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef orchestration fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef infra fill:#dcfce7,stroke:#16a34a,color:#14532d
+
+  class T,L,B data
+  class S,V orchestration
+  class C,K,N infra
+```
+
 ## Em um minuto
 
 ```bash
@@ -32,6 +61,7 @@ terraform -version
 aws sts get-caller-identity       # credenciais validas
 kubectl version --client
 helm version
+docker version                    # build das imagens do Spark
 ```
 
 Se faltar algum:
@@ -59,7 +89,9 @@ desta conta.
 ```
 
 **Sem argumento** sobe só a base: bucket de estado → `terraform` do cluster → lake
-de dados → kubeconfig → Karpenter → StorageClass `gp3` → device plugin da NVIDIA.
+de dados → kubeconfig → role de spot da conta → Karpenter → StorageClass `gp3` →
+device plugin da NVIDIA. A role `AWSServiceRoleForEC2Spot` é criada só se não
+existir; sem ela, o Karpenter não consegue lançar máquinas spot.
 Nenhuma máquina de workload sobe; o Karpenter só cria EC2 (*Elastic Compute Cloud*)
 quando existir pod `Pending` que precise dela.
 
@@ -84,7 +116,9 @@ modo sem ZooKeeper.
 | `mlflow`  | MLflow com artefatos servidos pelo  | RDS Postgres + bucket S3   |
 |           | servidor                            | dos artefatos              |
 | `spark`   | Spark Operator, NodePools `spark` e | bucket S3 dos event logs   |
-|           | `spark-gpu`, Spark History Server   |                            |
+|           | `spark-gpu`, Spark History Server,  |                            |
+|           | build e push das imagens que faltam |                            |
+|           | no ECR                              |                            |
 | `kafka`   | Strimzi, 3 brokers KRaft, kafka-ui, | volumes EBS dos brokers    |
 |           | NodePools `kafka`, `kafka-connect`  |                            |
 |           | e `kafka-streams`                   |                            |
@@ -157,10 +191,12 @@ As tasks que disparam jobs Spark usam o `SparkKubernetesOperator`, que cria um
 serviço `spark` dá essa permissão ao service account `airflow-worker` pelo
 `airflow-rbac.yaml`:
 
-| Recurso             | Verbos                                       |
-| ------------------- | -------------------------------------------- |
-| `sparkapplications` | create, get, list, watch, patch, delete      |
-| `pods`, `pods/log`  | get, list, watch                             |
+| Recurso                    | Verbos                                  |
+| -------------------------- | --------------------------------------- |
+| `sparkapplications`        | create, get, list, watch, patch, delete |
+| `sparkapplications/status` | get                                     |
+| `pods`, `pods/log`,        | get, list, watch                        |
+| `events`                   |                                         |
 
 A permissão fica no serviço `spark` porque o namespace é dele: ela nasce e some com
 o `spark-jobs`, e o `airflow` não depende do `spark` estar de pé para subir.
